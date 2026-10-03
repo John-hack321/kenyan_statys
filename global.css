@@ -1,0 +1,75 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  .flex-center {
+    @apply flex items-center justify-center;
+  }
+
+  .flex-between {
+    @apply flex items-center justify-between;
+  }
+
+  .flex-start {
+    @apply flex items-start justify-center;
+  }
+}
+
+@layer components {
+  .custom-header {
+    @apply w-full flex flex-row items-center justify-between mb-10;
+  }
+
+  .custom-btn {
+    @apply bg-dark-green-ascents rounded-full p-3 w-full flex flex-row justify-center;
+  }
+
+  .label {
+    @apply text-base text-start w-full text-gray-500 pl-2;
+  }
+
+  .input {
+    @apply rounded-lg p-3 w-full text-base border-b leading-5;
+  }
+
+  .filter {
+    @apply px-6 py-3 rounded-full mr-2 shadow-sm shadow-black/10;
+  }
+
+  .menu-card {
+    @apply relative py-9 px-3.5 pt-24 flex items-center justify-end bg-white shadow-md shadow-black/10 rounded-3xl;
+  }
+
+  .profile-field {
+    @apply flex flex-row items-center justify-start mb-4;
+  }
+
+  .profile-field__icon {
+    @apply size-12 rounded-full flex items-center justify-center mr-3;
+  }
+
+  .searchbar {
+    @apply relative flex flex-row items-center justify-center w-full bg-white shadow-md shadow-black/10 rounded-full gap-5;
+  }
+
+  .tab-icon {
+    @apply flex min-w-20 items-center justify-center min-h-full gap-1 mt-12;
+  }
+
+  .offer-card {
+    @apply w-full h-48 my-3 rounded-xl overflow-hidden shadow-lg flex items-center gap-5;
+  }
+
+  .offer-card__info {
+    @apply flex-1 h-full flex flex-col justify-center items-start gap-4;
+  }
+
+  .profile-avatar {
+    @apply relative size-28 border-white border-2 rounded-full;
+  }
+
+  .profile-edit {
+    @apply flex items-center justify-center absolute bottom-2 right-0 border-2 border-white size-7 p-2 rounded-full;
+  }
+}
