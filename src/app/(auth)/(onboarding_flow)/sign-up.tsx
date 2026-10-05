@@ -12,7 +12,7 @@ import { SignUpFormValues, signUpSchema } from "@/constants/schemas/auth";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
 
-import { useAuth } from "../../../../lib/authContext";
+import { signup } from "@/lib/aut-actions";
 import * as sentry from "@sentry/react-native"
 import { rv } from "@/styles/responsive";
 import GoogleSignInButton from "@/components/GoogleSignInButton";
@@ -22,7 +22,6 @@ import AppleSignInButton from "@/components/AppleSignInButton";
 
 const SignUpPage = () => {
 
-    const {signup} = useAuth()
 
     const {
     control,
@@ -62,10 +61,16 @@ const SignUpPage = () => {
 
       // call the signup functioanlity api's with payload
         console.log("Submitting:", payload);
-        await signup(payload.email , payload.phone, payload.first_legal_name, payload.last_legal_name, payload.id_number, payload.date_of_birth , payload.password)
+        const { needsEmailConfirmation } = await signup(payload.email , payload.phone, payload.first_legal_name, payload.last_legal_name, payload.id_number, payload.date_of_birth , payload.password)
 
-        Alert.alert("success", "you have been signed in successfuly");
-        router.replace("/");
+        if (needsEmailConfirmation) {
+            Alert.alert("check your email", "we sent you a link to confirm your account, then sign in.");
+            router.replace("/sign-in");
+        } else {
+            Alert.alert("success", "you have been signed in successfuly");
+            router.replace("/");
+        }
+        
     } catch (error: any) {
         Alert.alert("error", error.message);
         sentry.captureEvent(error)

@@ -37,7 +37,7 @@ export default function TabsLayout () {
 
     return (
         <SafeAreaView className="h-full">
-        <ProtectedRoute>
+
             <StatusBar style="dark"/>
             <Tabs
                 screenOptions={{
@@ -77,7 +77,6 @@ export default function TabsLayout () {
                 
             
             </Tabs>
-        </ProtectedRoute>
 
         </SafeAreaView>
     )

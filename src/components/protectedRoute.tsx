@@ -2,16 +2,16 @@
 import { Redirect } from 'expo-router';
 import { ReactNode } from 'react';
 import { ActivityIndicator, View } from 'react-native';
-import { useAuth } from '../../lib/authContext';
+import { useAuthContext } from '../../lib/hooks/auth-context';
 
 type ProtectedRouteProps = {
   children: ReactNode;
 };
 
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { user, loading } = useAuth();
+  const { isLoggedIn, isLoading } = useAuthContext();
 
-  if (loading) {
+  if (isLoading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator size="large" />
@@ -19,7 +19,7 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
     );
   }
 
-  if (!user) {
+  if (!isLoggedIn) {
     return <Redirect href="/sign-in" />;
   }
 

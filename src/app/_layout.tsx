@@ -1,8 +1,8 @@
-import { SplashScreen } from "expo-router";
 import "../../global.css";
 
 import { Stack } from "expo-router";
-import { AuthProvider } from "../../lib/authContext";
+import AuthProvider from "../../providers/auth-provider";
+import { SplashScreenController } from "@/components/splash-screen-controller";
 import * as Sentry from '@sentry/react-native';
 
 Sentry.init({
@@ -25,11 +25,13 @@ Sentry.init({
 });
 
 function RootLayout() {
-
-  SplashScreen.hideAsync();
   return (
     <AuthProvider>
-      <Stack screenOptions={{ headerShown: false }} />
+      <SplashScreenController />
+      <Stack screenOptions={{ headerShown: false }} >
+        {/* to accomoadate the new guest first design we will have to show the auth screens as modals that scroll up from the bottom . */}
+        <Stack.Screen name="(auth)" options={{presentation: "modal"}} /> 
+      </Stack>
     </AuthProvider>
   );
 }

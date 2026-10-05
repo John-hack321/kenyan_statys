@@ -1,109 +1,101 @@
 import { TouchableOpacity, View, Text, ActivityIndicator } from "react-native"
-import GoogleIcon from "@/components/google-icon";
-import { GoogleSignInButtonProps } from "@/constants/type";
-import { rv } from "@/styles/responsive";
-import * as sentry from "@sentry/react-native"
+import GoogleIcon from "@/components/google-icon"
+import { GoogleSignInButtonProps } from "@/constants/type"
+import { rv } from "@/styles/responsive"
 
 import { supabase } from '@/lib/supabase'
-import { expo } from '@/app.json'
-import { Image } from 'expo-image'
 import * as WebBrowser from 'expo-web-browser'
 import * as Linking from 'expo-linking'
-import { useEffect, useState } from "react";
+import { useEffect, useState } from "react"
 
+WebBrowser.maybeCompleteAuthSession()
 
-const GoogleSignInButton = ({styles, text} : GoogleSignInButtonProps) => {
-"sb_publishable_zYIeWhmBgOqa8VQucMSslQ_G7hKHTQ9"
-    const [isLoading , setIsloading] = useState(false)
+function extractParamsFromUrl(url: string) {
+    const [beforeHash, hash = ''] = url.split('#')
+    const query = beforeHash.split('?')[1] ?? ''
+    const params = new URLSearchParams([query, hash].filter(Boolean).join('&'))
+    return {
+        access_token: params.get('access_token'),
+        refresh_token: params.get('refresh_token'),
+        code: params.get('code'),
+        error: params.get('error_description') ?? params.get('error'),
+    }
+}
 
-    function extractParamsFromUrl(url: string) {
-        const parsedUrl = new URL(url)
-        const hash = parsedUrl.hash.substring(1) // Remove the leading '#'
-        const params = new URLSearchParams(hash)
-        return {
-            access_token: params.get('access_token'),
-            expires_in: parseInt(params.get('expires_in') || '0'),
-            refresh_token: params.get('refresh_token'),
-            token_type: params.get('token_type'),
-            provider_token: params.get('provider_token'),
-            code: params.get('code'),
-        }
-        }
-        async function onSignInButtonPress() {
+const GoogleSignInButton = ({ styles, text }: GoogleSignInButtonProps) => {
+    const [isLoading, setIsloading] = useState(false)
+
+    async function onSignInButtonPress() {
         console.debug('onSignInButtonPress - start')
-        console.log("now setting isLoading to laoding")
         setIsloading(true)
-        const redirectTo = Linking.createURL('/')
-        console.log('Redirect URL being sent to Supabase:', redirectTo)
-        const res = await supabase.auth.signInWithOAuth({
-            provider: 'google',
-            options: {
-            redirectTo: redirectTo,
-            queryParams: { prompt: 'consent' },
-            skipBrowserRedirect: true,
-            },
-        })
-        const googleOAuthUrl = res.data.url
-        if (!googleOAuthUrl) {
-            console.error('no oauth url found!')
-            return
-        }
-        const result = await WebBrowser.openAuthSessionAsync(
-            googleOAuthUrl,
-            redirectTo,
-            { showInRecents: true }
-        ).catch((err) => {
-            console.error('onSignInButtonPress - openAuthSessionAsync - error', { err })
-            console.log(err)
-        })
-        console.debug('onSignInButtonPress - openAuthSessionAsync - result', { result })
-        if (result && result.type === 'success') {
-            console.debug('onSignInButtonPress - openAuthSessionAsync - success')
-            const params = extractParamsFromUrl(result.url)
-            console.debug('onSignInButtonPress - openAuthSessionAsync - success', { params })
-            if (params.access_token && params.refresh_token) {
-            console.debug('onSignInButtonPress - setSession')
-            const { data, error } = await supabase.auth.setSession({
-                access_token: params.access_token,
-                refresh_token: params.refresh_token,
+        try {
+            const redirectTo = Linking.createURL('/')
+            console.log('Redirect URL being sent to Supabase:', redirectTo)
+
+            const { data, error } = await supabase.auth.signInWithOAuth({
+                provider: 'google',
+                options: {
+                    redirectTo,
+                    queryParams: { prompt: 'consent' },
+                    skipBrowserRedirect: true,
+                },
             })
-            console.debug('onSignInButtonPress - setSession - success', { data, error })
-            return
-            } else {
-            console.error('onSignInButtonPress - setSession - failed')
-            // sign in/up failed
+            if (error || !data?.url) {
+                console.error('no oauth url found!', error)
+                return
             }
-        } else {
-            console.error('onSignInButtonPress - openAuthSessionAsync - failed')
+
+            // NOTE: no showInRecents here, that was causing the blue error screen
+            const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo)
+            console.log('auth session result:', result)
+
+            if (result.type !== 'success') return
+
+            const params = extractParamsFromUrl(result.url)
+            if (params.error) {
+                console.error('OAuth error:', params.error)
+                return
+            }
+
+            if (params.access_token && params.refresh_token) {
+                const { error } = await supabase.auth.setSession({
+                    access_token: params.access_token,
+                    refresh_token: params.refresh_token,
+                })
+                if (error) console.error('setSession failed', error)
+            } else if (params.code) {
+                const { error } = await supabase.auth.exchangeCodeForSession(params.code)
+                if (error) console.error('exchangeCodeForSession failed', error)
+            } else {
+                console.error('No tokens or code in redirect URL:', result.url)
+            }
+        } catch (err) {
+            console.error('Google sign-in failed', err)
+        } finally {
+            setIsloading(false)
         }
-        setIsloading(false) // I am not sure if I have placed this in the right place . 
-        }
-        // to warm up the browser
-        useEffect(() => {
-            WebBrowser.warmUpAsync()
-            return () => {
+    }
+
+    // to warm up the browser
+    useEffect(() => {
+        WebBrowser.warmUpAsync()
+        return () => {
             WebBrowser.coolDownAsync()
         }
-        }, [])
+    }, [])
 
     return (
-        <TouchableOpacity 
-        onPress={onSignInButtonPress}
-        className={` ${styles}`} >
-            {
-                isLoading ? (
-                    <ActivityIndicator size="small" color="black"/>
-                ) : (
-                    <View className="flex flex-row itmes-center justify-center " style={{gap: rv(8)}}>
-                        <GoogleIcon size={rv(18)} />
-                        <Text className="text-[#1F1F1F] font-bold">{text}</Text>
-                    </View>
-                )
-            }
-            
+        <TouchableOpacity onPress={onSignInButtonPress} className={` ${styles}`}>
+            {isLoading ? (
+                <ActivityIndicator size="small" color="black" />
+            ) : (
+                <View className="flex flex-row items-center justify-center" style={{ gap: rv(8) }}>
+                    <GoogleIcon size={rv(18)} />
+                    <Text className="text-[#1F1F1F] font-bold">{text}</Text>
+                </View>
+            )}
         </TouchableOpacity>
-
     )
 }
 
-export default GoogleSignInButton;
+export default GoogleSignInButton

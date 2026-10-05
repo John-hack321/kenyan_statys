@@ -10,7 +10,7 @@ import { Link } from "expo-router";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { Text, TouchableOpacity, View } from "react-native";
-import { useAuth } from "../../../../lib/authContext";
+import { login } from "@/lib/aut-actions";
 import { Alert } from "react-native";
 
 import { rv, rm } from "@/styles/responsive";
@@ -21,7 +21,6 @@ import AppleSignInButton from "@/components/AppleSignInButton";
 
 const SignIn = () => {
 
-    const {login} = useAuth()
 
     const {
         control,

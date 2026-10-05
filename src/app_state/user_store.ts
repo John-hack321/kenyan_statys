@@ -2,7 +2,16 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import { User } from '../../lib/authContext';
+
+// The profile we keep on the device. It is filled from the Supabase session
+// (for Google sign-in the name/avatar come from Google).
+export type User = {
+  id: string;          // Supabase user id (a UUID string)
+  email?: string;
+  fullName?: string;
+  avatarUrl?: string;
+  provider?: string;   // 'google' | 'email'
+};
 
 type UserStore = {
   user: User | null;
@@ -20,6 +29,10 @@ export const useUserStore = create<UserStore>()(
     {
       name: 'user-storage', // key used under the hood in AsyncStorage
       storage: createJSONStorage(() => AsyncStorage),
+      // The shape of `user` changed (id used to be a number from the old backend).
+      // Bumping the version throws away any old saved user instead of crashing on it.
+      version: 1,
+      migrate: () => ({ user: null }) as any,
     }
   )
 );
