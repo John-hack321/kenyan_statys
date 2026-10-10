@@ -4,6 +4,8 @@ import { AuthContext } from '../lib/hooks/auth-context'
 import { supabase } from '../lib/supabase'
 import { User, useUserStore } from '../src/app_state/user_store'
 
+// as of now this is the heart of out auth logic . 
+
 // claude notes.
 // Turns a Supabase session into the small profile object we keep in zustand.
 // For Google sign-in, Supabase puts Google's profile in user.user_metadata.
@@ -28,6 +30,9 @@ function userFromSession(session: Session): User {
     }
 }
 
+
+// a provider just shares information eg for our case the authprovider : issomeoneloggedin etc . 
+
 export default function AuthProvider({ children }: PropsWithChildren) {
     const [session, setSession] = useState<Session | null>(null)
     const [isLoading, setIsLoading] = useState(true)
@@ -38,6 +43,9 @@ export default function AuthProvider({ children }: PropsWithChildren) {
     useEffect(() => {
         // Supabase calls this once at startup (INITIAL_SESSION) and again on every
         // SIGNED_IN, SIGNED_OUT and TOKEN_REFRESHED. So this one listener is enough.
+
+        // onAuthstateChange is a listener , supabase calls it when the app starts, after a login , after a logout and when 
+        // the token refreshes . 
         const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
             console.log('Auth state changed:', event)
             setSession(newSession)

@@ -153,7 +153,6 @@ const SignIn = () => {
                 <AppleSignInButton 
                 text="Apple"
                 styles="bg-black items-center justify-center rounded-lg p-2 flex-1 flex-row"/>
-s
             </View>
 
             <View className="flex items-center flex-row gap-2 justify-center">

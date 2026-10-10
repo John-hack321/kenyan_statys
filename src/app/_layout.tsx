@@ -4,6 +4,11 @@ import { Stack } from "expo-router";
 import AuthProvider from "../../providers/auth-provider";
 import { SplashScreenController } from "@/components/splash-screen-controller";
 import * as Sentry from '@sentry/react-native';
+import { useFonts } from 'expo-font';
+import * as SplashScreen from 'expo-splash-screen';
+import { useEffect } from 'react';
+
+SplashScreen.preventAutoHideAsync();
 
 Sentry.init({
   dsn: 'https://9554e94255537078e5923891c6198458@o4512062619189248.ingest.de.sentry.io/4512062625349712',
@@ -25,10 +30,27 @@ Sentry.init({
 });
 
 function RootLayout() {
+  const [fontsLoaded, error] = useFonts({
+    'Rubik-Regular': require('../../assets/fonts/Rubik-Regular.ttf'),
+    'Rubik-Bold': require('../../assets/fonts/Rubik-Bold.ttf'),
+    'Rubik-ExtraBold': require('../../assets/fonts/Rubik-ExtraBold.ttf'),
+    'Rubik-Light': require('../../assets/fonts/Rubik-Light.ttf'),
+    'Rubik-Medium': require('../../assets/fonts/Rubik-Medium.ttf'),
+    'Rubik-SemiBold': require('../../assets/fonts/Rubik-SemiBold (1).ttf'),
+  });
+
+  useEffect(() => {
+    if (error) throw error;
+    if (fontsLoaded) SplashScreen.hideAsync();
+  }, [fontsLoaded, error]);
+
+  if (!fontsLoaded) return null;
+
   return (
     <AuthProvider>
       <SplashScreenController />
       <Stack screenOptions={{ headerShown: false }} >
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         {/* to accomoadate the new guest first design we will have to show the auth screens as modals that scroll up from the bottom . */}
         <Stack.Screen name="(auth)" options={{presentation: "modal"}} /> 
       </Stack>

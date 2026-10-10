@@ -24,7 +24,7 @@ export function useRequireAuth() {
     )
 }
 
-// example usage : 
+// example usage : it is used on any button that may require a login for it to work . 
 
 // const requireAuth = useRequireAuth()
 // 

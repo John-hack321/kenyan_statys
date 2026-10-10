@@ -1,47 +1,22 @@
-import { useEffect, useMemo } from 'react'
-import { ActivityIndicator, FlatList, Text, View } from 'react-native'
-import { useListingsStore } from '@/app_state/listing_store'
-import { loadListings, loadMoreListings } from '@/api/listings'
-import Search from '@/components/search'
-import { TouchableOpacity } from 'react-native'
-import { rv, rs, rm } from '@/styles/responsive'
-import { FeaturedCard, ListingCard } from '@/components/listing_cards'
+import { View } from "react-native";
+import { ListingCard } from "./listing_cards";
 
-export default function Home() {
-    const items = useListingsStore((s) => s.items) // listing data from zustand 
-
-    const isLoading = useListingsStore((s) => s.isLoading)
-    const isRefreshing = useListingsStore((s) => s.isRefreshing)
-    const isLoadingMore = useListingsStore((s) => s.isLoadingMore)
-    const error = useListingsStore((s) => s.error)
-
-    useEffect(() => { loadListings() }, [])
-
-    const FeaturedListings = useMemo(() => {
-        return items
-            .filter((item) => item.rating !== null)
-            .sort((a, b) => (b.rating || 0) - (a.rating || 0))
-            .slice(0, 8)
-    }, [items])
-
-    return (
-        
 <FlatList
     data={items}
     numColumns={2}
     renderItem={({ item }) => (
         <ListingCard item={item} onPress={()=> {}} />
     )}
-    keyExtractor={(item) => item.id}
+    keyExtractor={(item) => item.$id}
     contentContainerClassName="pb-32"
     columnWrapperClassName="flex gap-5 px-5"
     showsVerticalScrollIndicator={false}
     ListEmptyComponent={
-        isLoading ? (
+        loading ? (
             <ActivityIndicator size="large" className="text-primary-300 mt-5" />
         ) : (
             <View>
-                No listings found {/* find a better way to do this later on .  */}
+                No listings found 
             </View>
         )
     }
@@ -95,8 +70,5 @@ export default function Home() {
             </View>
             
         </View>
-    )}
+  )}
 />
-
-    )
-}

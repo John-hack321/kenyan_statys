@@ -23,7 +23,7 @@ const TabBarIcon = ({focused, iconName, title} : TabBarIconProps) => (
         <Ionicons 
             name={iconName} 
             size={24} 
-            color={focused ? "dark-green-ascents" : "#5D5F6D"} 
+            color={focused ? "#064D30" : "#5D5F6D"} 
         />
         <Text className={cn('text-sm font-bold' , focused ? 'text-dark-green-ascents' : 'text-gray-200')}>
             {title}
@@ -64,7 +64,7 @@ export default function TabsLayout () {
                     <Tabs.Screen
                         name="index"
                         options={{
-                            tabBarIcon: ({focused}) => <TabBarIcon focused={focused} iconName="home" title="home"/>
+                            tabBarIcon: ({focused}) => <TabBarIcon  focused={focused} iconName="home" title="home"/>
                         }}
                     />
     

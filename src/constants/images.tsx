@@ -8,4 +8,5 @@ export const images = {
   app_icon: require("../../assets/images/budget_lens_icon.jpg"),
   app_icon_transparent: require("../../assets/images/budget_lens_icon_transparent.png"),
   google: require("../../assets/images/google-g.png"),
+  cardGradient: require("../../assets/images/card-gradient.png"),
 };
