@@ -36,7 +36,7 @@ export default function TabsLayout () {
     const mode = modeStore((state) => state.mode)
 
     return (
-        <SafeAreaView className="h-full">
+        <SafeAreaView className="h-full bg-white"> {/* we have to make this bg white so that the status bar and navigation background become white like the app .  */}
 
             <StatusBar style="dark"/>
             <Tabs

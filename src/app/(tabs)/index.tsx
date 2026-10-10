@@ -33,7 +33,7 @@ export default function Home() {
         <ListingCard item={item} onPress={()=> {}} />
     )}
     keyExtractor={(item) => item.id}
-    contentContainerClassName="pb-32"
+    contentContainerClassName="pb-32 bg-white"
     columnWrapperClassName="flex gap-5 px-5"
     showsVerticalScrollIndicator={false}
     ListEmptyComponent={
@@ -46,7 +46,7 @@ export default function Home() {
         )
     }
   ListHeaderComponent={() => (
-    <View className='flex mx-5 gap-4 mt-4'>
+    <View className='flex mx-5 gap-4 mt-4 bg-white'>
             {/** search bar and filters */}
             <Search/>
             
