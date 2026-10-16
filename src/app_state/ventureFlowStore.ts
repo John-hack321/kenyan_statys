@@ -1,5 +1,6 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { persist, createJSONStorage } from "zustand/middleware";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export type ListingType = "Room" | "Hotel" | "House" | "Apartment" | "GuestHouse"
 
@@ -23,6 +24,9 @@ export const useVentureDraftStore = create<BecomeAHostVentureDraftStore>()(
             resetDraft : () => set({draft: { type: "Apartment" }})
 
         }),
-        { name: 'venture-draft-storage' }
+        {
+            name: 'venture-draft-storage',
+            storage: createJSONStorage(() => AsyncStorage),
+        }
     )
 )

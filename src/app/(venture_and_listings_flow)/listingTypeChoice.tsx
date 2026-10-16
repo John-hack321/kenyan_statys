@@ -3,7 +3,6 @@ import { rs } from "@/styles/responsive"
 import { ListingType } from "@/app_state/ventureFlowStore"
 
 import { useVentureDraftStore } from "@/app_state/ventureFlowStore"
-import { useState } from "react"
 
 const listingTypes: { type: ListingType; label: string; icon: string }[] = [
     { type: "Room", label: "Room", icon: "🏠" },
@@ -18,7 +17,7 @@ const ListingTypeOption = ({ type, label, icon, onPress, clicked}: { type: Listi
     <TouchableOpacity
         onPress={onPress}
         className={`flex-1 m-2 p-4  rounded-xl border  items-center justify-center
-            ${clicked} ? "border-dark-green-ascents bg-green-200 " : "bg-white border-gray-200" `}
+            ${clicked ? "border-dark-green-ascents bg-green-200 " : "bg-white border-gray-200"} `}
         style={{ minHeight: rs(120) }}
     >
         <Text style={{ fontSize: rs(40) }}>{icon}</Text>
@@ -27,14 +26,12 @@ const ListingTypeOption = ({ type, label, icon, onPress, clicked}: { type: Listi
 )
 
 const ListingTypeChoicePage = () => {
-    const handleSelectType = (type: ListingType) => {
-        console.log("Selected:", type)
-        // TODO: Update ventureDraft store with selected type
-    }
-
     const draft = useVentureDraftStore(state => state.draft)
-    const [selectedListingType, setSelectedListingType] = useState<ListingType | undefined>(draft?.type)
+    const setDraft = useVentureDraftStore(state => state.setDraft)
 
+    const handleSelectType = (type: ListingType) => {
+        setDraft({ type })
+    }
 
     return (
         <View className="flex-1 bg-gray-50">
@@ -54,7 +51,7 @@ const ListingTypeChoicePage = () => {
                         label={item.label}
                         icon={item.icon}
                         onPress={() => handleSelectType(item.type)}
-                        clicked={item.label === selectedListingType}
+                        clicked={item.type === draft?.type}
                     />
                 )}
             />
@@ -63,3 +60,9 @@ const ListingTypeChoicePage = () => {
 }
 
 export default ListingTypeChoicePage
+
+// notes for ai : 
+// for this page the next button should not be clickable when a place type has not been chosen
+// I am not sure how we willl pass this back to the next button which is back in the layout file but we will ahve to do it 
+// and most pages will be passing their on check for wheather the button si clickable or not . 
+// I also need a way to move to the next page using the next button 
