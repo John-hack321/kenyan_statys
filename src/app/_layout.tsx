@@ -53,6 +53,7 @@ function RootLayout() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         {/* to accomoadate the new guest first design we will have to show the auth screens as modals that scroll up from the bottom . */}
         <Stack.Screen name="(auth)" options={{presentation: "modal"}} /> 
+        <Stack.Screen name="(venture_and_listings_flow)" options={{headerShown: false}} />
       </Stack>
     </AuthProvider>
   );

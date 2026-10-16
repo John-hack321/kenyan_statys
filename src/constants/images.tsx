@@ -1,3 +1,5 @@
+import { requireNativeComponent } from "react-native";
+
 export const images = {
   index: require("../../assets/images/index_image_clear.png"),
   onboarding: require("../../assets/images/onboarding.png"),
@@ -9,4 +11,5 @@ export const images = {
   app_icon_transparent: require("../../assets/images/budget_lens_icon_transparent.png"),
   google: require("../../assets/images/google-g.png"),
   cardGradient: require("../../assets/images/card-gradient.png"),
+  appartmentImage: require("../../assets/images/apartment_image_one.jpg")
 };

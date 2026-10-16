@@ -1,20 +1,25 @@
 import { Text, TouchableOpacity } from "react-native";
 
+// make this work like a universal button .
+// it will just use for simple stuff that do not need alot of customizations btw .
+
 type Props = {
+    textClassName: string;
+    buttonName: string;
     className?: string;
-    onPress?: () => void;
+    onPress?: () => void; // we have to make this programmable because it will have different effects based on the location of placement .
 };
 
-const BecomeAHostButton = ({ className = "", onPress }: Props) => {
+const CustomButton = ({textClassName, buttonName , className = "", onPress }: Props) => {
     return (
         <TouchableOpacity
             onPress={onPress}
             activeOpacity={0.7}
-            className={`border border-black rounded-xl py-4 items-center ${className}`}
+            className={`${className}`}
         >
-            <Text className="font-bold text-base">Become a host</Text>
+            <Text className={`${textClassName}`}>{buttonName}</Text>
         </TouchableOpacity>
     );
 };
 
-export default BecomeAHostButton;
+export default CustomButton;
