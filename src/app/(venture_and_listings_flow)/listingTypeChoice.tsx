@@ -1,68 +1,70 @@
-import { View, Text, FlatList, TouchableOpacity } from "react-native"
-import { rs } from "@/styles/responsive"
-import { ListingType } from "@/app_state/ventureFlowStore"
+import { FlatList, TouchableOpacity, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import AppText from "@/components/AppText";
+import { ListingType, useVentureDraftStore } from "@/app_state/ventureFlowStore";
+import { rm, rs, rv } from "@/styles/responsive";
 
-import { useVentureDraftStore } from "@/app_state/ventureFlowStore"
+type IconName = keyof typeof Ionicons.glyphMap;
 
-const listingTypes: { type: ListingType; label: string; icon: string }[] = [
-    { type: "Room", label: "Room", icon: "🏠" },
-    { type: "Hotel", label: "Hotel", icon: "🏨" },
-    { type: "House", label: "House", icon: "🏡" },
-    { type: "Apartment", label: "Apartment", icon: "🏢" },
-    { type: "GuestHouse", label: "Guest House", icon: "🛏️" },
-]
+const listingTypes: { type: ListingType; label: string; icon: IconName }[] = [
+    { type: "Room", label: "Room", icon: "bed-outline" },
+    { type: "Hotel", label: "Hotel", icon: "business-outline" },
+    { type: "House", label: "House", icon: "home-outline" },
+    { type: "Apartment", label: "Apartment", icon: "grid-outline" },
+    { type: "GuestHouse", label: "Guest house", icon: "key-outline" },
+];
 
+type OptionProps = { label: string; icon: IconName; selected: boolean; onPress: () => void };
 
-const ListingTypeOption = ({ type, label, icon, onPress, clicked}: { type: ListingType; label: string; icon: string; onPress: () => void , clicked: boolean}) => (
+// selected: green background, white icon and text. not selected: white background, black icon and text.
+const ListingTypeOption = ({ label, icon, selected, onPress }: OptionProps) => (
     <TouchableOpacity
         onPress={onPress}
-        className={`flex-1 m-2 p-4  rounded-xl border  items-center justify-center
-            ${clicked ? "border-dark-green-ascents bg-green-200 " : "bg-white border-gray-200"} `}
-        style={{ minHeight: rs(120) }}
+        activeOpacity={0.85}
+        accessibilityRole="button"
+        accessibilityState={{ selected }}
+        className={`items-center justify-center rounded-2xl border ${
+            selected ? "bg-dark-green-ascents border-dark-green-ascents" : "bg-white border-gray-300"
+        }`}
+        style={{ width: "48%", minHeight: rv(110), marginBottom: rv(12), gap: rv(8) }}
     >
-        <Text style={{ fontSize: rs(40) }}>{icon}</Text>
-        <Text className="mt-2 font-medium text-gray-800" style={{ fontSize: rs(16) }}>{label}</Text>
+        <Ionicons name={icon} size={rm(34)} color={selected ? "white" : "black"} />
+        <AppText variant="body" weight="medium" className={selected ? "text-white" : "text-black"}>
+            {label}
+        </AppText>
     </TouchableOpacity>
-)
+);
 
 const ListingTypeChoicePage = () => {
-    const draft = useVentureDraftStore(state => state.draft)
-    const setDraft = useVentureDraftStore(state => state.setDraft)
-
-    const handleSelectType = (type: ListingType) => {
-        setDraft({ type })
-    }
+    const type = useVentureDraftStore((s) => s.draft.type);
+    const setDraft = useVentureDraftStore((s) => s.setDraft);
 
     return (
-        <View className="flex-1 bg-gray-50">
-            <Text className="font-semibold mx-5 mt-4" style={{ fontSize: rs(20) }}>
-                Which of these matches your place best?
-            </Text>
+        <View className="flex-1 bg-white">
+            <View style={{ paddingHorizontal: rs(20), paddingTop: rv(20), paddingBottom: rv(8) }}>
+                <AppText variant="title">Which of these matches your place best?</AppText>
+                <AppText variant="small" className="text-gray-500" style={{ marginTop: rv(4) }}>
+                    Pick one. You can add more listings later.
+                </AppText>
+            </View>
 
             <FlatList
                 data={listingTypes}
                 keyExtractor={(item) => item.type}
                 numColumns={2}
-                contentContainerClassName="p-4"
+                contentContainerStyle={{ paddingHorizontal: rs(20), paddingTop: rv(12) }}
                 columnWrapperStyle={{ justifyContent: "space-between" }}
                 renderItem={({ item }) => (
                     <ListingTypeOption
-                        type={item.type}
                         label={item.label}
                         icon={item.icon}
-                        onPress={() => handleSelectType(item.type)}
-                        clicked={item.type === draft?.type}
+                        selected={item.type === type}
+                        onPress={() => setDraft({ type: item.type })}
                     />
                 )}
             />
         </View>
-    )
-}
+    );
+};
 
-export default ListingTypeChoicePage
-
-// notes for ai : 
-// for this page the next button should not be clickable when a place type has not been chosen
-// I am not sure how we willl pass this back to the next button which is back in the layout file but we will ahve to do it 
-// and most pages will be passing their on check for wheather the button si clickable or not . 
-// I also need a way to move to the next page using the next button 
+export default ListingTypeChoicePage;

@@ -1,32 +1,43 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-export type ListingType = "Room" | "Hotel" | "House" | "Apartment" | "GuestHouse"
-
-export type BecomeAHostVentureDraft = {
-    type : ListingType
+export type ListingType = "Room" | "Hotel" | "House" | "Apartment" | "GuestHouse";
+export type BasicDetailsType = {
+    maxGuests : number;
+    rooms : number;
+    beds : number;
+    bathrooms: number;
 }
+
+// Every field is optional: the draft starts empty and each page of the flow fills in its own part.
+// Add new fields here as you build the next pages.
+export type BecomeAHostVentureDraft = {
+    type?: ListingType;
+    basicDetails? : BasicDetailsType;
+};
 
 type BecomeAHostVentureDraftStore = {
-    draft : BecomeAHostVentureDraft | null;
-    setDraft : (draft : BecomeAHostVentureDraft) => void;
-    //setItem : (item) => void; I want to set a way in which I can set only sepcific part of the draft like maybe I just want to add the type or something okay . 
-    resetDraft : () => void;
-}
+    draft: BecomeAHostVentureDraft;
+    // merges: setDraft({ type: "House" }) only changes `type` and keeps everything else
+    setDraft: (patch: Partial<BecomeAHostVentureDraft>) => void;
+    resetDraft: () => void;
+};
 
 export const useVentureDraftStore = create<BecomeAHostVentureDraftStore>()(
     persist(
         (set) => ({
-            draft : { type: "Apartment" }, // preselect apartment for a new venture
+            draft: {}, // nothing preselected, so "Next" stays disabled until the user chooses
 
-            setDraft : (draft) => set({draft}),
-            resetDraft : () => set({draft: { type: "Apartment" }})
-
+            setDraft: (patch) => set((state) => ({ draft: { ...state.draft, ...patch } })),
+            resetDraft: () => set({ draft: {} }),
         }),
         {
-            name: 'venture-draft-storage',
+            name: "venture-draft-storage",
             storage: createJSONStorage(() => AsyncStorage),
+            // the old saved draft had type "Apartment" preselected and could be null; start clean
+            version: 1,
+            migrate: () => ({ draft: {} }) as any,
         }
     )
-)
+);

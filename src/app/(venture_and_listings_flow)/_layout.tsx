@@ -1,65 +1,89 @@
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Slot, usePathname } from "expo-router";
-import { Image, TouchableOpacity, Text, View } from "react-native";
+import { Slot, usePathname, useRouter } from "expo-router";
+import { Alert, Image, ImageBackground, useWindowDimensions, View } from "react-native";
 import { images } from "@/constants/images";
-import WelcomePage from "./welcomePage";
-import { ImageBackground } from "react-native";
-import { Dimensions } from "react-native";
-import { BackButton, DiscardButton, NextPageButton, SaveAndExitButton } from "@/components/ventureFlowButtons";
-import { useState } from "react";
-import { rs, rv , rm } from "@/styles/responsive";
-
+import AppText from "@/components/AppText";
+import {
+    BackButton,
+    DiscardButton,
+    FlowProgressBar,
+    NextPageButton,
+    SaveAndExitButton,
+} from "@/components/ventureFlowButtons";
+import { useVentureFlow } from "@/lib/hooks/useVentureFlow";
+import { useVentureDraftStore } from "@/app_state/ventureFlowStore";
+import { rs, rv } from "@/styles/responsive";
 
 export default function VentureCreationLayout() {
-
+    const router = useRouter();
     const pathName = usePathname();
-    const isWelcomePage = pathName.endsWith("/welcomePage")
-    const [isNextClickable , setIsNextClickable] = useState(true)
+    const { height } = useWindowDimensions();
+    const isWelcomePage = pathName.endsWith("/welcomePage");
+
+    const flow = useVentureFlow();
+    const resetDraft = useVentureDraftStore((s) => s.resetDraft);
+
+    // the draft is saved on the phone as you type, so "save & exit" only has to leave
+    const handleSaveAndExit = () => router.replace("/");
+
+    const handleDiscard = () =>
+        Alert.alert("Discard this listing?", "Everything you entered so far will be deleted.", [
+            { text: "Keep editing", style: "cancel" },
+            {
+                text: "Discard",
+                style: "destructive",
+                onPress: () => {
+                    resetDraft();
+                    router.replace("/");
+                },
+            },
+        ]);
 
     return (
-        <SafeAreaView className="h-full ">
+        <SafeAreaView className="flex-1 bg-white">
             <StatusBar style="dark" />
 
-            {/** this image only applies to the welcome page */}
+            {/** the big image only applies to the welcome page */}
             {isWelcomePage && (
-                <View className="relative w-full bg-red-500"
-                style={{ height: Dimensions.get('screen').height / 1.8}}>
-                    <ImageBackground
-                        source={images.appartmentImage}
-                        resizeMode="stretch"
-                        className="size-full "
-                    />
-                    <Image
-                        source={images.cardGradient}
-                        className="w-full h-2/3 absolute bottom-0 "
-                    />
-                    <View className="absolute bottom-0 left-0 right-0 px-6 pb-8 bg-orange-500">
-                        <Text className="text-3xl font-rubik-extrabold text-white mb-2">
-                            Ready to Start listing your apartments?
-                        </Text>
+                <View className="relative w-full" style={{ height: Math.min(height * 0.4, rv(340)) }}>
+                    <ImageBackground source={images.appartmentImage} resizeMode="cover" className="size-full" />
+                    <Image source={images.cardGradient} className="w-full h-2/3 absolute bottom-0" />
+                    <View className="absolute bottom-0 left-0 right-0" style={{ paddingHorizontal: rs(24), paddingBottom: rv(24) }}>
+                        <AppText variant="heading" className="text-white">
+                            Ready to start listing your apartments?
+                        </AppText>
                     </View>
                 </View>
             )}
 
             {!isWelcomePage && (
-                <View className="bg-green-500  flex flex-row justify-between px-5 py-2"
-                style={{height : rv(60) }}>
-                    <SaveAndExitButton/>
-                    <DiscardButton/>
+                <View>
+                    <View className="flex-row items-center justify-between" style={{ paddingHorizontal: rs(20), paddingVertical: rv(10) }}>
+                        <SaveAndExitButton onPress={handleSaveAndExit} />
+                        <DiscardButton onPress={handleDiscard} />
+                    </View>
+                    <FlowProgressBar progress={flow.progress} />
                 </View>
             )}
 
-            <Slot/>
+            <View className="flex-1">
+                <Slot />
+            </View>
 
             {!isWelcomePage && (
-                <View className="bg-yellow-500  flex flex-row justify-between item-center py-2 px-5 "
-                style={{height: rv(72)}}>
-                    <BackButton/>
-                    <NextPageButton clickable={isNextClickable} />
+                <View
+                    className="flex-row items-center justify-between border-t border-gray-200 bg-white"
+                    style={{ paddingHorizontal: rs(20), paddingVertical: rv(10) }}
+                >
+                    <BackButton onPress={flow.goBack} />
+                    <NextPageButton
+                        clickable={flow.canProceed}
+                        onPress={flow.goNext}
+                        label={flow.isLast ? "Finish" : "Next"}
+                    />
                 </View>
             )}
-
         </SafeAreaView>
-    )
+    );
 }
