@@ -3,18 +3,32 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export type ListingType = "Room" | "Hotel" | "House" | "Apartment" | "GuestHouse";
+
 export type BasicDetailsType = {
-    maxGuests : number;
-    rooms : number;
-    beds : number;
+    maxGuests: number;
+    rooms: number;
+    beds: number;
     bathrooms: number;
-}
+};
+
+// what the page shows (and saves) before the host touches anything
+export const DEFAULT_BASIC_DETAILS: BasicDetailsType = { maxGuests: 2, rooms: 1, beds: 1, bathrooms: 1 };
+
+// for sentences like "Tell us more about your guest house"
+export const LISTING_TYPE_LABELS: Record<ListingType, string> = {
+    Room: "room",
+    Hotel: "hotel",
+    House: "house",
+    Apartment: "apartment",
+    GuestHouse: "guest house",
+};
 
 // Every field is optional: the draft starts empty and each page of the flow fills in its own part.
 // Add new fields here as you build the next pages.
 export type BecomeAHostVentureDraft = {
     type?: ListingType;
-    basicDetails? : BasicDetailsType;
+    basicDetails?: BasicDetailsType;
+    reservation?: "entirePlace" | "room" // note for AI : you can maybe find a better name for this instead of offer just incase it is not that good enough . 
 };
 
 type BecomeAHostVentureDraftStore = {

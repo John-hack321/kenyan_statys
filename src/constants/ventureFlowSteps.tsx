@@ -11,7 +11,8 @@ export type VentureFlowStep = {
 
 export const VENTURE_FLOW_STEPS: VentureFlowStep[] = [
     { route: "/listingTypeChoice",   canProceed: (d) => !!d.type },
-    { route: "/basicListingDetails", canProceed: () => true }, // TODO: add the real check when the page is built
+    { route: "/basicListingDetails", canProceed: (d) => !!d.basicDetails && Object.values(d.basicDetails).every((n) => n >= 1) },
+    { route: "/reservationTypeChoice", canProceed: (d) => !!d.reservation },
 ];
 
 export const WELCOME_ROUTE = "/welcomePage";
