@@ -4,6 +4,14 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export type ListingType = "Room" | "Hotel" | "House" | "Apartment" | "GuestHouse";
 
+// what guests get when they book: the whole place, or just a room (plus shared spaces)
+export type GuestAccessType = "entirePlace" | "privateRoom";
+
+export type listingLocationCordinatesType = {
+    longitude : number;
+    latitude : number;
+}
+
 export type BasicDetailsType = {
     maxGuests: number;
     rooms: number;
@@ -28,7 +36,8 @@ export const LISTING_TYPE_LABELS: Record<ListingType, string> = {
 export type BecomeAHostVentureDraft = {
     type?: ListingType;
     basicDetails?: BasicDetailsType;
-    reservation?: "entirePlace" | "room" // note for AI : you can maybe find a better name for this instead of offer just incase it is not that good enough . 
+    guestAccess?: GuestAccessType;
+    listingLocationCordinates?: listingLocationCordinatesType;
 };
 
 type BecomeAHostVentureDraftStore = {
@@ -49,8 +58,8 @@ export const useVentureDraftStore = create<BecomeAHostVentureDraftStore>()(
         {
             name: "venture-draft-storage",
             storage: createJSONStorage(() => AsyncStorage),
-            // the old saved draft had type "Apartment" preselected and could be null; start clean
-            version: 1,
+            // version 2: `reservation` was renamed to `guestAccess`, so old saved drafts are dropped
+            version: 2,
             migrate: () => ({ draft: {} }) as any,
         }
     )
