@@ -1,4 +1,6 @@
 import { BecomeAHostVentureDraft } from "@/app_state/ventureFlowStore";
+import { MAPS_ENABLED } from "@/constants/featureFlags";
+import { MIN_PHOTOS } from "./listingLimits";
 
 // THE one place that defines the flow: the order of the pages and when each page lets the user continue.
 // The layout reads this to know what "Next" and "Back" do, so pages never have to tell the layout anything.
@@ -13,9 +15,13 @@ export const VENTURE_FLOW_STEPS: VentureFlowStep[] = [
     { route: "/listingTypeChoice",   canProceed: (d) => !!d.type },
     { route: "/basicListingDetails", canProceed: (d) => !!d.basicDetails && Object.values(d.basicDetails).every((n) => n >= 1) },
     { route: "/guestAccessChoice",   canProceed: (d) => !!d.guestAccess },
-    { route: "/listingLocation" , canProceed: (d) => true },
-    { route: "/amenities" , canProceed: (d) => true }, // I have just put it this way since I have not defined the data for the aminities since I am not sure whether to put it as a list or something else okay . 
-    { route: "/addPhotos", canProceed: (d) => true}
+    // with the map switched off (featureFlags.ts) nobody can pin a location, so don't block them
+    { route: "/listingLocation",     canProceed: (d) => !MAPS_ENABLED || !!d.listingLocationCordinates },
+    // optional: a host with no amenities to list can continue
+    { route: "/amenities",           canProceed: () => true },
+    { route: "/addPhotos",           canProceed: (d) => (d.photos?.length ?? 0) >= MIN_PHOTOS },
+    { route: "/listingNameAndDescription" , canProceed: (d) => true},
+    { route: "/finalListingDetails" , canProceed: (d) => true}
 ];
 
 export const WELCOME_ROUTE = "/welcomePage";

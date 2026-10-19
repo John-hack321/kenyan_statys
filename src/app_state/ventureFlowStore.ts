@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import type { AmenityId } from "@/constants/amenities";
 
 export type ListingType = "Room" | "Hotel" | "House" | "Apartment" | "GuestHouse";
 
@@ -8,15 +9,24 @@ export type ListingType = "Room" | "Hotel" | "House" | "Apartment" | "GuestHouse
 export type GuestAccessType = "entirePlace" | "privateRoom";
 
 export type listingLocationCordinatesType = {
-    longitude : number;
-    latitude : number;
-}
+    longitude: number;
+    latitude: number;
+};
 
 export type BasicDetailsType = {
     maxGuests: number;
     rooms: number;
     beds: number;
     bathrooms: number;
+};
+
+// A photo the host picked but that is not uploaded yet. `uri` is a file on the phone.
+// The ORDER of the array is the order guests will see: the first photo is the listing cover.
+export type DraftPhoto = {
+    id: string;
+    uri: string;
+    width?: number;
+    height?: number;
 };
 
 // what the page shows (and saves) before the host touches anything
@@ -38,6 +48,10 @@ export type BecomeAHostVentureDraft = {
     basicDetails?: BasicDetailsType;
     guestAccess?: GuestAccessType;
     listingLocationCordinates?: listingLocationCordinatesType;
+    amenities?: AmenityId[];
+    photos?: DraftPhoto[];
+    ListingName?: string;
+    ListingDescription?: string;
 };
 
 type BecomeAHostVentureDraftStore = {

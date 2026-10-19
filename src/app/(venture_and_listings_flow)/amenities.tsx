@@ -1,45 +1,52 @@
-import { View , ScrollView} from "react-native"
-import AppText from "@/components/AppText"
-import { rv, rm , rs } from "@/styles/responsive"
-import { Ionicons } from "@expo/vector-icons"
+import { ScrollView, View } from "react-native";
+import AppText from "@/components/AppText";
+import AmenityChip from "@/components/AmenityChip";
+import { AMENITIES, AMENITY_GROUPS , AmenityId } from "@/constants/amenities";
+import { useVentureDraftStore } from "@/app_state/ventureFlowStore";
+import { rs, rv } from "@/styles/responsive";
 
-// NOTES FOR AI 
-//  here do you think we should also add amenities around the palce such as malls , parks etc or should we stick to the things
-// that are within the place ? 
-// I am not sure on how to represent this data s of now , but if this is not suitalbe you can change it okay 
+// Only things INSIDE the place or its building: that is what the host controls and what guests filter by.
+// "Near a mall / park" should come from the map location later, not from what the host claims.
+const AmenitiesPage = () => {
+    const amenities = useVentureDraftStore((s) => s.draft.amenities);
+    const setDraft = useVentureDraftStore((s) => s.setDraft);
+    const selected = amenities ?? [];
 
-export type AmenityType = "Kitchen" | "Hot water" | "Washer" | "Dryer" | "Tv" | "Refrigerator" | "Wifi" | "Coffee maker" | "Youtube , Netflix etx" // note for ai : and any other esential that you think is important when people are booking a space in kenya okay . 
+    const toggle = (id: AmenityId) =>
+        setDraft({ amenities: selected.includes(id) ? selected.filter((x) => x !== id) : [...selected, id] });
 
-type IconName = keyof typeof Ionicons.glyphMap;
-
-//note for AI  : put the correct icon names here and make the list as good as possible okay . 
-const Amenities: { type: AmenityType; label: string; icon: IconName }[] = [
-    { type: "Kitchen", label: "Kitchen", icon: "bed-outline" },
-    { type: "Hot water", label: "Hot water", icon: "business-outline" },
-    { type: "Washer", label: "Washer", icon: "home-outline" },
-    { type: "Dryer", label: "Dryer", icon: "grid-outline" },
-    { type: "Tv", label: "Tv", icon: "key-outline" },
-];
-
-export const AmenitiesPage = () => {
     return (
         <View className="flex-1 bg-white">
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: rv(16) }}>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: rv(24) }}>
                 <View style={{ paddingHorizontal: rs(20), paddingTop: rv(20), paddingBottom: rv(8) }}>
-                    <AppText variant="title">Lest make your place stand out</AppText>
+                    <AppText variant="title">What does your place offer?</AppText>
                     <AppText variant="small" className="text-gray-500" style={{ marginTop: rv(4) }}>
-                        Pick amenities and perks you offer at your place you can alwasy change this later
+                        Pick everything that applies. You can change this any time later.
+                        {selected.length > 0 ? `  ${selected.length} selected.` : ""}
                     </AppText>
                 </View>
 
-                {/* notes for AI :  find a way to list he amenities here and remember in this on the user cna chose as many as possible okay. so I dont know if we should send this part of the data s a list or ? but you decide on how you will structure the ddata okay . dont froget to also define it in the venture flow store too okay . here I dont konw hwere you will use the flat list or the map function but you decide okay .  */}
-                <View>
-                    
-                </View>
-
+                {AMENITY_GROUPS.map((group) => (
+                    <View key={group.key} style={{ paddingHorizontal: rs(20), marginTop: rv(16) }}>
+                        <AppText variant="large" weight="semibold" style={{ marginBottom: rv(10) }}>
+                            {group.title}
+                        </AppText>
+                        <View className="flex-row flex-wrap" style={{ gap: rs(10) }}>
+                            {AMENITIES.filter((a) => a.group === group.key).map((a) => (
+                                <AmenityChip
+                                    key={a.id}
+                                    label={a.label}
+                                    icon={a.icon}
+                                    selected={selected.includes(a.id)}
+                                    onPress={() => toggle(a.id)}
+                                />
+                            ))}
+                        </View>
+                    </View>
+                ))}
             </ScrollView>
         </View>
-    )
-}
+    );
+};
 
 export default AmenitiesPage;
