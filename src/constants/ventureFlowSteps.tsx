@@ -13,7 +13,9 @@ export const VENTURE_FLOW_STEPS: VentureFlowStep[] = [
     { route: "/listingTypeChoice",   canProceed: (d) => !!d.type },
     { route: "/basicListingDetails", canProceed: (d) => !!d.basicDetails && Object.values(d.basicDetails).every((n) => n >= 1) },
     { route: "/guestAccessChoice",   canProceed: (d) => !!d.guestAccess },
-    { route: "/listingLocation" , canProceed: (d) => true }
+    { route: "/listingLocation" , canProceed: (d) => true },
+    { route: "/amenities" , canProceed: (d) => true }, // I have just put it this way since I have not defined the data for the aminities since I am not sure whether to put it as a list or something else okay . 
+    { route: "/addPhotos", canProceed: (d) => true}
 ];
 
 export const WELCOME_ROUTE = "/welcomePage";

@@ -17,6 +17,10 @@ const ListingLocationPage = () => {
                 </View>
 
                 {/* map view goes here */}
+                {/* notes for ai , here on this map view I want a marker that stays at the center and the user drags the map to put the map in the right place .  */}
+                {/* notes for ai : I also want an option for a users to use their current location ( tht is if they are in their appartment , so it should ask if they are when chosing the option or ask them to stand in front of the apartment or home ) */}
+                {/* remember from this we need to get the cordinates = > longitude and latitude and put them in the zustand store where necesafy okay .  */}
+                {/* dont forget to use the scaling options so that the different parts look good on any device okay .  */}
                 <View className="border mx-5 rounded-lg mt-4 flex items-center justify-center"
                 style={{height: rv(350)}}>
                     <MapView
