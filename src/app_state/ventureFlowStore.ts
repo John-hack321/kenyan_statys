@@ -29,6 +29,18 @@ export type DraftPhoto = {
     height?: number;
 };
 
+// The address the host types. region/area are PUBLIC (used for search), the street, building, unit and
+// landmark are private until a guest books. `country` is the ISO code, e.g. "KE".
+export type ListingAddress = {
+    country?: string;
+    region?: string;
+    area?: string;
+    streetAddress?: string;
+    buildingName?: string;
+    unit?: string;
+    landmark?: string;
+};
+
 // what the page shows (and saves) before the host touches anything
 export const DEFAULT_BASIC_DETAILS: BasicDetailsType = { maxGuests: 2, rooms: 1, beds: 1, bathrooms: 1 };
 
@@ -50,8 +62,9 @@ export type BecomeAHostVentureDraft = {
     listingLocationCordinates?: listingLocationCordinatesType;
     amenities?: AmenityId[];
     photos?: DraftPhoto[];
-    ListingName?: string;
-    ListingDescription?: string;
+    listingName?: string;
+    listingDescription?: string;
+    address?: ListingAddress;
 };
 
 type BecomeAHostVentureDraftStore = {

@@ -42,7 +42,7 @@ const GuestAccessChoicePage = () => {
                         <ChoiceCard
                             key={option.value}
                             title={option.title}
-                            description={option.description}
+                            description={option.description}    
                             icon={option.icon}
                             selected={guestAccess === option.value}
                             onPress={() => setDraft({ guestAccess: option.value })}

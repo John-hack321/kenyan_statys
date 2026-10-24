@@ -1,6 +1,7 @@
 import { BecomeAHostVentureDraft } from "@/app_state/ventureFlowStore";
 import { MAPS_ENABLED } from "@/constants/featureFlags";
-import { MIN_PHOTOS } from "./listingLimits";
+import { MIN_PHOTOS } from "@/constants/listingLimits";
+import { listingAddressSchema , listingTextSchema } from "./schemas/listing";
 
 // THE one place that defines the flow: the order of the pages and when each page lets the user continue.
 // The layout reads this to know what "Next" and "Back" do, so pages never have to tell the layout anything.
@@ -20,8 +21,9 @@ export const VENTURE_FLOW_STEPS: VentureFlowStep[] = [
     // optional: a host with no amenities to list can continue
     { route: "/amenities",           canProceed: () => true },
     { route: "/addPhotos",           canProceed: (d) => (d.photos?.length ?? 0) >= MIN_PHOTOS },
-    { route: "/listingNameAndDescription" , canProceed: (d) => true},
-    { route: "/finalListingDetails" , canProceed: (d) => true}
+    // the same zod schemas the forms use decide whether "Next" works, so the two can never disagree
+    { route: "/listingNameAndDescription", canProceed: (d) => listingTextSchema.safeParse({ listingName: d.listingName ?? "", listingDescription: d.listingDescription ?? "" }).success },
+    { route: "/finalListingDetails", canProceed: (d) => listingAddressSchema.safeParse(d.address ?? {}).success },
 ];
 
 export const WELCOME_ROUTE = "/welcomePage";
