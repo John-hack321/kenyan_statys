@@ -35,6 +35,8 @@ export type ListingAddress = {
     country?: string;
     region?: string;
     area?: string;
+    areaPlaceId?: number;   // set when the host picked the area from our places table
+    areaIsNew?: boolean;    // set when the host added an area that wasn't in the table
     streetAddress?: string;
     buildingName?: string;
     unit?: string;

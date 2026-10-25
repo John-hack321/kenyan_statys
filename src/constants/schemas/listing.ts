@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { KENYA_COUNTIES } from "@/constants/kenyaPlaces";
+import { GAZETTEER_ENABLED } from "@/constants/featureFlags";
 
 // ---------- limits (also add them as CHECK constraints in the database, the app is not the last line of defence)
 export const LISTING_NAME_MIN = 8;
@@ -51,17 +51,18 @@ export const listingTextSchema = z.object({
 export type ListingTextForm = z.infer<typeof listingTextSchema>;
 
 // ---------- address page
-const place = (what: string) =>
-    z.string().trim().min(2, `Enter ${what}`).max(50, "Keep it under 50 characters").regex(PLACE_CHARS, "Letters, numbers, spaces and . ' - only");
-
 const optionalLine = (max: number) =>
     z.string().trim().max(max, `Keep it under ${max} characters`).regex(ADDRESS_CHARS, "Letters, numbers and basic punctuation only").optional();
 
+// country: ISO code. region: whatever the country calls it (county, province, state...). It comes from our places
+// table, so we never hard-code one country's names. area: the city, town or neighbourhood.
 export const listingAddressSchema = z
     .object({
         country: z.string().min(2, "Choose a country"),
-        region: place("a county or region"),
-        area: place("an area or estate"),
+        region: z.string().trim().max(50, "Keep it under 50 characters").regex(ADDRESS_CHARS, "Letters, numbers and basic punctuation only").optional(),
+        area: z.string().trim().min(2, "Enter your city, town or area").max(50, "Keep it under 50 characters"),
+        areaPlaceId: z.number().int().optional(),
+        areaIsNew: z.boolean().optional(),
         streetAddress: z
             .string()
             .trim()
@@ -72,9 +73,20 @@ export const listingAddressSchema = z
         unit: optionalLine(40),
         landmark: optionalLine(80),
     })
-    .refine((a) => a.country !== "KE" || (KENYA_COUNTIES as readonly string[]).includes(a.region.trim()), {
+    // with the places table switched on, the area must be picked from it (or added on purpose), never just typed
+    .refine((a) => !GAZETTEER_ENABLED || a.areaPlaceId != null || a.areaIsNew === true, {
+        path: ["area"],
+        message: "Pick your place from the list, or add it as a new area",
+    })
+    // names that came from our table are trusted; names the host typed must use plain characters
+    .refine((a) => a.areaPlaceId != null || PLACE_CHARS.test(a.area), {
+        path: ["area"],
+        message: "Letters, numbers, spaces and . ' - only",
+    })
+    // a picked place already knows its region; anything else needs one
+    .refine((a) => a.areaPlaceId != null || (a.region ?? "").trim().length >= 2, {
         path: ["region"],
-        message: "Choose a county from the list",
+        message: "Choose or enter a region",
     });
 
 export type ListingAddressForm = z.infer<typeof listingAddressSchema>;

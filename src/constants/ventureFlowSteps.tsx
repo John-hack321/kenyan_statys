@@ -24,6 +24,8 @@ export const VENTURE_FLOW_STEPS: VentureFlowStep[] = [
     // the same zod schemas the forms use decide whether "Next" works, so the two can never disagree
     { route: "/listingNameAndDescription", canProceed: (d) => listingTextSchema.safeParse({ listingName: d.listingName ?? "", listingDescription: d.listingDescription ?? "" }).success },
     { route: "/finalListingDetails", canProceed: (d) => listingAddressSchema.safeParse(d.address ?? {}).success },
+    { route: "/listingFlowGratitude" ,  canProceed: () => true},
+    { route: "/ventureInfoOne" , canProceed : () => true}
 ];
 
 export const WELCOME_ROUTE = "/welcomePage";

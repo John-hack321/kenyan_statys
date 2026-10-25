@@ -1,23 +1,27 @@
 import { useEffect, useRef, useState } from "react";
-import { ScrollView, TextInput, TouchableOpacity, View } from "react-native";
-import { Controller, useForm, useWatch } from "react-hook-form";
+import { ScrollView, TextInput, View } from "react-native";
+import { Controller, ControllerFieldState, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import * as Location from "expo-location";
 import { Ionicons } from "@expo/vector-icons";
 import AppText from "@/components/AppText";
-import TextField from "@/components/TextField";
+import PlaceSearchField from "@/components/PlaceSearchField";
 import SelectField from "@/components/SelectField";
+import TextField from "@/components/TextField";
 import { ListingAddress, useVentureDraftStore } from "@/app_state/ventureFlowStore";
-import { AFRICAN_COUNTRIES, COUNTRY_OPTIONS, DEFAULT_COUNTRY_CODE } from "@/constants/africaCountries";
-import { MAPS_ENABLED } from "@/constants/featureFlags";
-
-import { KENYA_AREA_SUGGESTIONS,KENYA_COUNTY_OPTIONS, findCounty  } from "@/constants/kenyaPlaces";
-import { ListingAddressForm, listingAddressSchema, sanitizeAddressLine, sanitizePlace } from "@/constants/schemas/listing";
-
-import { rm, rs, rv } from "@/styles/responsive";
+import { COUNTRY_OPTIONS, DEFAULT_COUNTRY_CODE } from "@/constants/africaCountries";
+import { GAZETTEER_ENABLED } from "@/constants/featureFlags";
+import {
+    ListingAddressForm,
+    listingAddressSchema,
+    sanitizeAddressLine,
+    sanitizePlace,
+} from "@/constants/schemas/listing";
+import { PlaceResult, distanceKm, fetchRegions } from "@/lib/places";
 import { normalizePlaceName } from "@/lib/text";
+import { rm, rs, rv } from "@/styles/responsive";
 
 const GREEN = "#064D30";
+const PIN_FAR_KM = 25; // warn (never block) when the pin is further than this from the chosen place
 
 const EMPTY: ListingAddressForm = {
     country: DEFAULT_COUNTRY_CODE,
@@ -29,6 +33,10 @@ const EMPTY: ListingAddressForm = {
     landmark: "",
 };
 
+// A field shows its error only after the host has left it, or once it has text. Never on a field nobody touched.
+const shownError = (fs: ControllerFieldState, value?: string) =>
+    fs.isTouched || !!value ? fs.error?.message : undefined;
+
 const SectionTitle = ({ title, note, icon }: { title: string; note: string; icon?: keyof typeof Ionicons.glyphMap }) => (
     <View style={{ marginBottom: rv(2) }}>
         <View className="flex-row items-center" style={{ gap: rs(6) }}>
@@ -39,26 +47,15 @@ const SectionTitle = ({ title, note, icon }: { title: string; note: string; icon
     </View>
 );
 
-const SuggestionChip = ({ label, selected, onPress }: { label: string; selected: boolean; onPress: () => void }) => (
-    <TouchableOpacity
-        onPress={onPress}
-        activeOpacity={0.8}
-        accessibilityRole="button"
-        accessibilityState={{ selected }}
-        className={`rounded-full border ${selected ? "bg-dark-green-ascents border-dark-green-ascents" : "bg-white border-gray-300"}`}
-        style={{ paddingHorizontal: rs(12), paddingVertical: rv(6) }}
-    >
-        <AppText variant="caption" weight="medium" className={selected ? "text-white" : "text-black"}>{label}</AppText>
-    </TouchableOpacity>
-);
-
 const FinalListingDetailsPage = () => {
     const setDraft = useVentureDraftStore((s) => s.setDraft);
+    const areaRef = useRef<TextInput>(null);
     const streetRef = useRef<TextInput>(null);
     const buildingRef = useRef<TextInput>(null);
     const unitRef = useRef<TextInput>(null);
     const landmarkRef = useRef<TextInput>(null);
-    const [filledFromPin, setFilledFromPin] = useState(false);
+    const [pinWarning, setPinWarning] = useState<string | null>(null);
+    const [regions, setRegions] = useState<string[]>([]);
 
     // read once: react-hook-form owns the values while the page is open, the draft is just where we save them
     const initial = useRef(useVentureDraftStore.getState().draft).current;
@@ -86,38 +83,145 @@ const FinalListingDetailsPage = () => {
         if (filled.length) trigger(filled);
     }, [initial, trigger]);
 
-    // The pin from the location page already says where the place is. Ask the phone's own geocoder
-    // (no Google key needed) and pre-select the country and county. Only when the host hasn't chosen yet.
-    useEffect(() => {
-        const coords = initial.listingLocationCordinates;
-        if (!MAPS_ENABLED || !coords || initial.address?.region) return;
-        let cancelled = false;
-        (async () => {
-            try {
-                const [place] = await Location.reverseGeocodeAsync(coords);
-                if (cancelled || !place) return;
-                const code = place.isoCountryCode?.toUpperCase();
-                if (code && AFRICAN_COUNTRIES.some((c) => c.code === code)) setValue("country", code, { shouldDirty: true });
-                if (code === "KE") {
-                    const county = findCounty([place.region, place.subregion, place.city]);
-                    if (county) {
-                        setValue("region", county, { shouldDirty: true, shouldValidate: true });
-                        setFilledFromPin(true);
-                    }
-                }
-            } catch {
-                // no geocoder on this phone: the host just picks the county themselves
-            }
-        })();
-        return () => { cancelled = true; };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
-
     const country = values.country ?? DEFAULT_COUNTRY_CODE;
     const region = values.region ?? "";
-    const area = values.area ?? "";
-    const isKenya = country === "KE";
-    const suggestions = isKenya ? KENYA_AREA_SUGGESTIONS[region] ?? [] : [];
+    const areaPicked = values.areaPlaceId != null;
+    const areaIsNew = values.areaIsNew === true;
+    const areaChosen = areaPicked || areaIsNew;
+
+    // A host-added area needs a region. List the regions we have for this country (whatever it calls them).
+    useEffect(() => {
+        if (!GAZETTEER_ENABLED || !areaIsNew) return;
+        let cancelled = false;
+        fetchRegions(country)
+            .then((r) => { if (!cancelled) setRegions(r); })
+            .catch(() => { if (!cancelled) setRegions([]); }); // no list: the host types the region
+        return () => { cancelled = true; };
+    }, [country, areaIsNew]);
+
+    // ---------- a place picked from our table: its region comes with it ----------
+    const handlePickPlace = (p: PlaceResult) => {
+        setValue("area", p.name.slice(0, 50), { shouldDirty: true, shouldValidate: true });
+        setValue("areaPlaceId", p.id, { shouldDirty: true });
+        setValue("areaIsNew", false, { shouldDirty: true });
+        setValue("region", (p.admin1 ?? "").slice(0, 50), { shouldDirty: true, shouldValidate: true });
+
+        // soft check: if the pin is far from the place they picked, tell them. Never blocks.
+        const pin = useVentureDraftStore.getState().draft.listingLocationCordinates;
+        if (pin) {
+            const km = distanceKm(pin, { latitude: p.lat, longitude: p.lng });
+            setPinWarning(km > PIN_FAR_KM ? `Your pin is about ${Math.round(km)} km from ${p.name}. Check the pin or the place.` : null);
+        } else {
+            setPinWarning(null);
+        }
+    };
+
+    // ---------- a place the host added because it wasn't in the table ----------
+    const handleAddNewArea = (name: string) => {
+        setValue("area", normalizePlaceName(name).slice(0, 50), { shouldDirty: true, shouldValidate: true });
+        setValue("areaPlaceId", undefined, { shouldDirty: true });
+        setValue("areaIsNew", true, { shouldDirty: true });
+        setPinWarning(null);
+    };
+
+    const regionField = (
+        <Controller
+            control={control}
+            name="region"
+            render={({ field: { value, onChange, onBlur }, fieldState }) =>
+                GAZETTEER_ENABLED && areaIsNew && regions.length > 0 ? (
+                    <SelectField
+                        label="Region"
+                        title="Select a region"
+                        value={value}
+                        options={regions.map((r) => ({ value: r, label: r }))}
+                        error={shownError(fieldState)}
+                        helper="The region this place is in."
+                        onChange={onChange}
+                    />
+                ) : (
+                    <TextField
+                        label="Region"
+                        value={value ?? ""}
+                        onChangeText={(t) => onChange(sanitizePlace(t))}
+                        onBlur={() => { onChange(normalizePlaceName(value ?? "")); onBlur(); }}
+                        placeholder="e.g. Nairobi"
+                        maxLength={50}
+                        error={shownError(fieldState, value)}
+                        helper="County, state or province, whatever your country calls it."
+                        autoCapitalize="words"
+                        returnKeyType="next"
+                        submitBehavior="submit"
+                        onSubmitEditing={() => areaRef.current?.focus()}
+                    />
+                )
+            }
+        />
+    );
+
+    const areaField = GAZETTEER_ENABLED ? (
+        <View>
+            <Controller
+                control={control}
+                name="area"
+                render={({ field: { value, onChange, onBlur }, fieldState }) => (
+                    <PlaceSearchField
+                        inputRef={areaRef}
+                        label="City, town or area"
+                        value={value}
+                        country={country}
+                        chosen={areaChosen}
+                        error={fieldState.isTouched ? fieldState.error?.message : undefined}
+                        helper={
+                            areaPicked ? (region ? `In ${region}` : "Matched to our places list.")
+                            : areaIsNew ? "New place. Choose the region it is in below."
+                            : undefined
+                        }
+                        onBlur={onBlur}
+                        onChangeText={(t) => {
+                            // typing again means the earlier pick no longer applies
+                            onChange(sanitizePlace(t));
+                            if (areaPicked) setValue("region", "");   // that region came from the old pick
+                            setValue("areaPlaceId", undefined);
+                            setValue("areaIsNew", false);
+                            setPinWarning(null);
+                        }}
+                        onPick={handlePickPlace}
+                        onAddNew={handleAddNewArea}
+                        onSubmitEditing={() => streetRef.current?.focus()}
+                    />
+                )}
+            />
+            {pinWarning && (
+                <View className="flex-row items-center" style={{ marginTop: rv(8), gap: rs(6) }}>
+                    <Ionicons name="warning-outline" size={rm(14)} color="#B45309" />
+                    <AppText variant="caption" style={{ color: "#B45309", flex: 1 }}>{pinWarning}</AppText>
+                </View>
+            )}
+        </View>
+    ) : (
+        // places table switched off: the host types the area
+        <Controller
+            control={control}
+            name="area"
+            render={({ field: { value, onChange, onBlur }, fieldState }) => (
+                <TextField
+                    inputRef={areaRef}
+                    label="City, town or area"
+                    value={value}
+                    onChangeText={(t) => onChange(sanitizePlace(t))}
+                    onBlur={() => { onChange(normalizePlaceName(value)); onBlur(); }}
+                    placeholder="e.g. Roysambu"
+                    maxLength={50}
+                    error={shownError(fieldState, value)}
+                    autoCapitalize="words"
+                    returnKeyType="next"
+                    submitBehavior="submit"
+                    onSubmitEditing={() => streetRef.current?.focus()}
+                />
+            )}
+        />
+    );
 
     return (
         <View className="flex-1 bg-white">
@@ -143,17 +247,20 @@ const FinalListingDetailsPage = () => {
                         name="country"
                         render={({ field: { value, onChange }, fieldState: { error } }) => (
                             <SelectField
-                                label="Country / region"
+                                label="Country"
                                 title="Select a country"
                                 value={value}
                                 options={COUNTRY_OPTIONS}
                                 error={error?.message}
                                 onChange={(code) => {
                                     if (code !== value) {
-                                        // a county from one country means nothing in another
+                                        // a place from one country means nothing in another
                                         setValue("region", "");
                                         setValue("area", "");
-                                        setFilledFromPin(false);
+                                        setValue("areaPlaceId", undefined);
+                                        setValue("areaIsNew", false);
+                                        setRegions([]);
+                                        setPinWarning(null);
                                     }
                                     onChange(code);
                                 }}
@@ -161,68 +268,18 @@ const FinalListingDetailsPage = () => {
                         )}
                     />
 
-                    <Controller
-                        control={control}
-                        name="region"
-                        render={({ field: { value, onChange, onBlur }, fieldState: { error } }) =>
-                            isKenya ? (
-                                <SelectField
-                                    label="County"
-                                    title="Select a county"
-                                    value={value}
-                                    options={KENYA_COUNTY_OPTIONS}
-                                    error={error?.message}
-                                    helper={filledFromPin ? "Filled in from your pin. Change it if it's not right." : undefined}
-                                    onChange={(c) => { setFilledFromPin(false); onChange(c); }}
-                                />
-                            ) : (
-                                <TextField
-                                    label="Region / state / province"
-                                    value={value}
-                                    onChangeText={(t) => onChange(sanitizePlace(t))}
-                                    onBlur={() => { onChange(normalizePlaceName(value)); onBlur(); }}
-                                    maxLength={50}
-                                    error={error?.message}
-                                    autoCapitalize="words"
-                                    returnKeyType="next"
-                                />
-                            )
-                        }
-                    />
-
-                    <View>
-                        <Controller
-                            control={control}
-                            name="area"
-                            render={({ field: { value, onChange, onBlur }, fieldState: { error } }) => (
-                                <TextField
-                                    label="Area / estate"
-                                    value={value}
-                                    onChangeText={(t) => onChange(sanitizePlace(t))}
-                                    onBlur={() => { onChange(normalizePlaceName(value)); onBlur(); }}
-                                    placeholder="e.g. Roysambu"
-                                    maxLength={50}
-                                    error={error?.message}
-                                    autoCapitalize="words"
-                                    returnKeyType="next"
-                                    submitBehavior="submit"
-                                    onSubmitEditing={() => streetRef.current?.focus()}
-                                />
-                            )}
-                        />
-                        {suggestions.length > 0 && (
-                            <View className="flex-row flex-wrap" style={{ gap: rs(8), marginTop: rv(10) }}>
-                                {suggestions.map((s) => (
-                                    <SuggestionChip
-                                        key={s}
-                                        label={s}
-                                        selected={area === s}
-                                        onPress={() => setValue("area", s, { shouldDirty: true, shouldValidate: true })}
-                                    />
-                                ))}
-                            </View>
-                        )}
-                    </View>
+                    {GAZETTEER_ENABLED ? (
+                        <>
+                            {areaField}
+                            {/* the region only needs asking when the host added a place we don't know */}
+                            {areaIsNew && regionField}
+                        </>
+                    ) : (
+                        <>
+                            {regionField}
+                            {areaField}
+                        </>
+                    )}
                 </View>
 
                 {/* ---------- private: only after booking ---------- */}
@@ -236,7 +293,7 @@ const FinalListingDetailsPage = () => {
                     <Controller
                         control={control}
                         name="streetAddress"
-                        render={({ field: { value, onChange, onBlur }, fieldState: { error } }) => (
+                        render={({ field: { value, onChange, onBlur }, fieldState }) => (
                             <TextField
                                 inputRef={streetRef}
                                 label="Street, road or estate"
@@ -245,8 +302,8 @@ const FinalListingDetailsPage = () => {
                                 onBlur={() => { onChange(value.trim()); onBlur(); }}
                                 placeholder="e.g. Off Thika Road, Mirema Drive"
                                 maxLength={120}
-                                error={error?.message}
-                                helper="Many places in Kenya have no street number. A road or estate name is fine."
+                                error={shownError(fieldState, value)}
+                                helper="Many places have no street number. A road or estate name is fine."
                                 autoCapitalize="words"
                                 returnKeyType="next"
                                 submitBehavior="submit"
@@ -258,7 +315,7 @@ const FinalListingDetailsPage = () => {
                     <Controller
                         control={control}
                         name="buildingName"
-                        render={({ field: { value, onChange, onBlur }, fieldState: { error } }) => (
+                        render={({ field: { value, onChange, onBlur }, fieldState }) => (
                             <TextField
                                 inputRef={buildingRef}
                                 label="Building name"
@@ -267,7 +324,7 @@ const FinalListingDetailsPage = () => {
                                 onChangeText={(t) => onChange(sanitizeAddressLine(t))}
                                 onBlur={() => { onChange((value ?? "").trim()); onBlur(); }}
                                 maxLength={60}
-                                error={error?.message}
+                                error={shownError(fieldState, value)}
                                 autoCapitalize="words"
                                 returnKeyType="next"
                                 submitBehavior="submit"
@@ -279,7 +336,7 @@ const FinalListingDetailsPage = () => {
                     <Controller
                         control={control}
                         name="unit"
-                        render={({ field: { value, onChange, onBlur }, fieldState: { error } }) => (
+                        render={({ field: { value, onChange, onBlur }, fieldState }) => (
                             <TextField
                                 inputRef={unitRef}
                                 label="Unit, floor or block"
@@ -289,7 +346,7 @@ const FinalListingDetailsPage = () => {
                                 onBlur={() => { onChange((value ?? "").trim()); onBlur(); }}
                                 placeholder="e.g. Block B, 3rd floor, Door 12"
                                 maxLength={40}
-                                error={error?.message}
+                                error={shownError(fieldState, value)}
                                 returnKeyType="next"
                                 submitBehavior="submit"
                                 onSubmitEditing={() => landmarkRef.current?.focus()}
@@ -300,7 +357,7 @@ const FinalListingDetailsPage = () => {
                     <Controller
                         control={control}
                         name="landmark"
-                        render={({ field: { value, onChange, onBlur }, fieldState: { error } }) => (
+                        render={({ field: { value, onChange, onBlur }, fieldState }) => (
                             <TextField
                                 inputRef={landmarkRef}
                                 label="Nearby landmark"
@@ -310,7 +367,7 @@ const FinalListingDetailsPage = () => {
                                 onBlur={() => { onChange((value ?? "").trim()); onBlur(); }}
                                 placeholder="e.g. Opposite Naivas, next to the petrol station"
                                 maxLength={80}
-                                error={error?.message}
+                                error={shownError(fieldState, value)}
                                 helper="Helps guests and boda riders find you."
                                 autoCapitalize="sentences"
                                 returnKeyType="done"
