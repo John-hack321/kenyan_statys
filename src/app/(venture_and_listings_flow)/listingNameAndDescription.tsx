@@ -127,7 +127,7 @@ const ListingNameAndDescriptionPage = () => {
                         <View className="flex-row items-center" style={{ gap: rs(8) }}>
                             <Ionicons name="bulb-outline" size={rm(18)} color="#064D30" />
                             <AppText variant="small" weight="semibold">What to mention</AppText>
-                        </View>g
+                        </View>
                         {TIPS.map((tip) => (
                             <AppText key={tip} variant="small" className="text-gray-700">{"•  " + tip}</AppText>
                         ))}
