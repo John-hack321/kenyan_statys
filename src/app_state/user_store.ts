@@ -15,7 +15,12 @@ export type User = {
 
 type UserStore = {
   user: User | null;
+  // The id of this account's venture, or null if the account is not a host yet.
+  // Read from the database by lib/host.ts (refreshHostStatus), never from user_metadata.
+  // `isHost` is just `ventureId !== null`.
+  ventureId: string | null;
   setUser: (user: User) => void;
+  setVentureId: (id: string | null) => void;
   resetUser: () => void;
 };
 
@@ -23,8 +28,10 @@ export const useUserStore = create<UserStore>()(
   persist(
     (set) => ({
       user: null,
+      ventureId: null,
       setUser: (user) => set({ user }),
-      resetUser: () => set({ user: null }),
+      setVentureId: (ventureId) => set({ ventureId }),
+      resetUser: () => set({ user: null, ventureId: null }),
     }),
     {
       name: 'user-storage', // key used under the hood in AsyncStorage
@@ -59,3 +66,5 @@ export const modeStore = create<UsageMode>()(
     }
   )
 );
+
+export const useIsHost = () => useUserStore((s) => s.ventureId !== null);

@@ -34,7 +34,7 @@ export default function VentureCreationLayout() {
                 text: "Discard",
                 style: "destructive",
                 onPress: () => {
-                    resetDraft();
+                    resetDraft(); // also deletes the kept photo files
                     router.replace("/");
                 },
             },
@@ -76,11 +76,12 @@ export default function VentureCreationLayout() {
                     className="flex-row items-center justify-between border-t border-gray-200 bg-white"
                     style={{ paddingHorizontal: rs(20), paddingVertical: rv(10) }}
                 >
-                    <BackButton onPress={flow.goBack} />
+                    <BackButton onPress={flow.goBack} disabled={flow.isPublishing} />
                     <NextPageButton
                         clickable={flow.canProceed}
+                        loading={flow.isPublishing}
                         onPress={flow.goNext}
-                        label={flow.isLast ? "Finish" : "Next"}
+                        label={flow.nextLabel}
                     />
                 </View>
             )}

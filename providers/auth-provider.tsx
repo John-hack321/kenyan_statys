@@ -2,7 +2,9 @@ import { PropsWithChildren, useEffect, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { AuthContext } from '../lib/hooks/auth-context'
 import { supabase } from '../lib/supabase'
+import { refreshHostStatus } from '../src/lib/host'
 import { User, useUserStore } from '../src/app_state/user_store'
+import { useVentureDraftStore } from '../src/app_state/ventureFlowStore'
 
 // as of now this is the heart of out auth logic . 
 
@@ -46,6 +48,7 @@ export default function AuthProvider({ children }: PropsWithChildren) {
 
         // onAuthstateChange is a listener , supabase calls it when the app starts, after a login , after a logout and when 
         // the token refreshes . 
+        // Keep this callback SYNCHRONOUS: calling async supabase methods in here can deadlock (see the host check below).
         const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
             console.log('Auth state changed:', event)
             setSession(newSession)
@@ -53,13 +56,22 @@ export default function AuthProvider({ children }: PropsWithChildren) {
             if (newSession) {
                 setUser(userFromSession(newSession)) // the setUser function is a self defined function from zustand for setting the user data 
             } else {
-                resetUser()
+                resetUser() // also forgets the venture id
+                // A real sign-out: the next person on this phone must not see this person's half-finished listing.
+                // (Not on INITIAL_SESSION: a guest who is still filling in a draft has no session either.)
+                if (event === 'SIGNED_OUT') useVentureDraftStore.getState().resetDraft()
             }
             setIsLoading(false)
         })
 
         return () => subscription.unsubscribe()
     }, [setUser, resetUser])
+
+    // Is this account a host? Asked from the database, outside the auth callback.
+    const userId = session?.user.id
+    useEffect(() => {
+        if (userId) refreshHostStatus()
+    }, [userId])
 
     return (
         <AuthContext.Provider value={{ session, isLoading, isLoggedIn: session !== null }}>

@@ -4,32 +4,28 @@ import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { CountryCodePicker } from '@/components/CountryCodePicker';
 import { DEFAULT_COUNTRY } from '@/constants/countryCodes';
-import { useUserStore } from '@/app_state/user_store';
+import { useIsHost, useUserStore } from '@/app_state/user_store';
 import { signOut } from "@/lib/aut-actions";
 import { useAuthContext } from '../../../lib/hooks/auth-context';
-import BecomeAHostButton from "@/components/becomeAHostButton";
+import TextButton from "@/components/TextButton";
 
 import { Ionicons } from '@expo/vector-icons';
-import CustomButton from "@/components/becomeAHostButton";
 
 const Profile = () => {
     const [country, setCountry] = useState(DEFAULT_COUNTRY);
     const user = useUserStore((state) => state.user);
+    const isHost = useIsHost();
     const { isLoggedIn, isLoading } = useAuthContext();
     const router = useRouter();
 
     if (isLoading) return null;
 
-   // Guest view: the tab is still reachable, it just asks them to sign in.
+    // first time hosts see the welcome page; hosts who already have a venture go straight to the listing questions
+    const handleBecomeAHostButtonPress = () => router.push("/welcomePage");
+    const handleAddListingPress = () => router.push("/listingTypeChoice");
 
-    const handleBecomeAHostButtonPress = () => {
-        router.push("/welcomePage")
-    }
-
+    // Guest view: the tab is still reachable, it just asks them to sign in.
     if (!isLoggedIn) {
-
-        
-
         return (
             <View className="flex-1 bg-white px-6 items-center justify-center">
                 {/* Icon */}
@@ -62,9 +58,9 @@ const Profile = () => {
                 </View>
 
                 {/* Secondary action */}
-                <CustomButton
+                <TextButton
                     onPress={handleBecomeAHostButtonPress}
-                    buttonName="Become a host" 
+                    buttonName="Become a host"
                     textClassName="font-bold text-base"
                     className="w-full max-w-[360px] border border-black rounded-xl py-4 items-center" />
             </View>
@@ -89,6 +85,13 @@ const Profile = () => {
                 <Text className="text-sm text-gray-600 mb-2">Country Code</Text>
                 <CountryCodePicker value={country} onChange={setCountry} />
             </View>
+
+            {/* signed in: hosts add another listing, everyone else can become a host */}
+            <TextButton
+                onPress={isHost ? handleAddListingPress : handleBecomeAHostButtonPress}
+                buttonName={isHost ? "Add a new listing" : "Become a host"}
+                textClassName="font-bold text-base"
+                className="mt-2 w-full border border-black rounded-xl py-4 items-center" />
 
             <TouchableOpacity onPress={signOut} className="mt-6 bg-black rounded-lg p-3 items-center">
                 <Text className="text-white font-bold">Sign out</Text>

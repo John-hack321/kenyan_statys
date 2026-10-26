@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { AmenityId } from "@/constants/amenities";
+import { clearDraftPhotos } from "@/lib/draftFiles";
 
 export type ListingType = "Room" | "Hotel" | "House" | "Apartment" | "GuestHouse";
 
@@ -16,9 +17,10 @@ export type listingLocationCordinatesType = {
     latitude: number;
 };
 
+// bedrooms: 0 means a studio or bedsitter. The others start at 1.
 export type BasicDetailsType = {
     maxGuests: number;
-    rooms: number;
+    bedrooms: number;
     beds: number;
     bathrooms: number;
 };
@@ -47,7 +49,7 @@ export type ListingAddress = {
 };
 
 // what the page shows (and saves) before the host touches anything
-export const DEFAULT_BASIC_DETAILS: BasicDetailsType = { maxGuests: 2, rooms: 1, beds: 1, bathrooms: 1 };
+export const DEFAULT_BASIC_DETAILS: BasicDetailsType = { maxGuests: 2, bedrooms: 1, beds: 1, bathrooms: 1 };
 
 // for sentences like "Tell us more about your guest house"
 export const LISTING_TYPE_LABELS: Record<ListingType, string> = {
@@ -61,6 +63,7 @@ export const LISTING_TYPE_LABELS: Record<ListingType, string> = {
 // Every field is optional: the draft starts empty and each page of the flow fills in its own part.
 // Add new fields here as you build the next pages.
 export type BecomeAHostVentureDraft = {
+    // ---- listing
     type?: ListingType;
     basicDetails?: BasicDetailsType;
     guestAccess?: GuestAccessType;
@@ -69,25 +72,29 @@ export type BecomeAHostVentureDraft = {
     photos?: DraftPhoto[];
     listingName?: string;
     listingDescription?: string;
+    pricePerNight?: number;      // KES
     address?: ListingAddress;
-    // Host verification fields
+    // ---- host verification (private)
     legalFirstName?: string;
     legalLastName?: string;
     idCountry?: string;
     idType?: IdType;
-    idNumber?: string;
-    // Venture fields
+    idNumber?: string;           // memory only, never saved on the phone
+    // ---- venture
     ventureName?: string;
     ventureCover?: DraftPhoto;
-    // Contact fields
-    contactPhone?: { country: string; number: string };
+    // ---- contact (private)
+    contactPhone?: { country: string; number: string };   // memory only, never saved on the phone
     contactEmail?: string;
+    // ---- bookkeeping
+    publishId?: string;          // one id per draft, so retrying a failed publish never creates a second listing
 };
 
 type BecomeAHostVentureDraftStore = {
     draft: BecomeAHostVentureDraft;
     // merges: setDraft({ type: "House" }) only changes `type` and keeps everything else
     setDraft: (patch: Partial<BecomeAHostVentureDraft>) => void;
+    // empties the draft AND deletes the photo files kept for it
     resetDraft: () => void;
 };
 
@@ -97,7 +104,10 @@ export const useVentureDraftStore = create<BecomeAHostVentureDraftStore>()(
             draft: {}, // nothing preselected, so "Next" stays disabled until the user chooses
 
             setDraft: (patch) => set((state) => ({ draft: { ...state.draft, ...patch } })),
-            resetDraft: () => set({ draft: {} }),
+            resetDraft: () => {
+                clearDraftPhotos();
+                set({ draft: {} });
+            },
         }),
         {
             name: "venture-draft-storage",
@@ -110,8 +120,9 @@ export const useVentureDraftStore = create<BecomeAHostVentureDraftStore>()(
                     contactPhone: undefined, // never save phone number to storage
                 },
             }),
-            // version 2: `reservation` was renamed to `guestAccess`, so old saved drafts are dropped
-            version: 2,
+            // version 3: `rooms` became `bedrooms`, and `pricePerNight` / `publishId` were added.
+            // version 2: `reservation` was renamed to `guestAccess`. Old saved drafts are dropped.
+            version: 3,
             migrate: () => ({ draft: {} }) as any,
         }
     )

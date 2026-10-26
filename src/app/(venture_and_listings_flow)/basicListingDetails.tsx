@@ -11,9 +11,10 @@ import {
 import { rs, rv } from "@/styles/responsive";
 
 // One entry per row. To add a row: add the field to BasicDetailsType + DEFAULT_BASIC_DETAILS, then one line here.
+// Bedrooms can be 0: that is a studio or bedsitter (guests filter by it on the home page).
 const FIELDS: { key: keyof BasicDetailsType; label: string; min: number; max: number }[] = [
     { key: "maxGuests", label: "Maximum guests", min: 1, max: 10 },
-    { key: "rooms", label: "Rooms", min: 1, max: 50 },
+    { key: "bedrooms", label: "Bedrooms", min: 0, max: 50 },
     { key: "beds", label: "Beds", min: 1, max: 50 },
     { key: "bathrooms", label: "Bathrooms", min: 1, max: 50 },
 ];
@@ -56,6 +57,9 @@ const BasicListingDetailsPage = () => {
                             onChange={(v) => update(f.key, v)}
                         />
                     ))}
+                    <AppText variant="caption" className="text-gray-500" style={{ marginTop: rv(10) }}>
+                        Choose 0 bedrooms for a studio or a bedsitter.
+                    </AppText>
                 </View>
             </ScrollView>
         </View>
