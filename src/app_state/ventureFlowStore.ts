@@ -8,6 +8,9 @@ export type ListingType = "Room" | "Hotel" | "House" | "Apartment" | "GuestHouse
 // what guests get when they book: the whole place, or just a room (plus shared spaces)
 export type GuestAccessType = "entirePlace" | "privateRoom";
 
+// ID types for host verification
+export type IdType = "national_id" | "passport" | "resident_id";
+
 export type listingLocationCordinatesType = {
     longitude: number;
     latitude: number;
@@ -67,6 +70,18 @@ export type BecomeAHostVentureDraft = {
     listingName?: string;
     listingDescription?: string;
     address?: ListingAddress;
+    // Host verification fields
+    legalFirstName?: string;
+    legalLastName?: string;
+    idCountry?: string;
+    idType?: IdType;
+    idNumber?: string;
+    // Venture fields
+    ventureName?: string;
+    ventureCover?: DraftPhoto;
+    // Contact fields
+    contactPhone?: { country: string; number: string };
+    contactEmail?: string;
 };
 
 type BecomeAHostVentureDraftStore = {
@@ -87,6 +102,14 @@ export const useVentureDraftStore = create<BecomeAHostVentureDraftStore>()(
         {
             name: "venture-draft-storage",
             storage: createJSONStorage(() => AsyncStorage),
+            // Sensitive data (ID number and phone number) is kept in memory only, never persisted
+            partialize: (state) => ({
+                draft: {
+                    ...state.draft,
+                    idNumber: undefined, // never save ID number to storage
+                    contactPhone: undefined, // never save phone number to storage
+                },
+            }),
             // version 2: `reservation` was renamed to `guestAccess`, so old saved drafts are dropped
             version: 2,
             migrate: () => ({ draft: {} }) as any,

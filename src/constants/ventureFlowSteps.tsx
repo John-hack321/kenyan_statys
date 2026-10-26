@@ -1,7 +1,8 @@
 import { BecomeAHostVentureDraft } from "@/app_state/ventureFlowStore";
 import { MAPS_ENABLED } from "@/constants/featureFlags";
 import { MIN_PHOTOS } from "@/constants/listingLimits";
-import { listingAddressSchema , listingTextSchema } from "./schemas/listing";
+import { listingAddressSchema, listingTextSchema } from "./schemas/listing";
+import { contactSchema, idSchema, legalNameSchema, ventureNameFormSchema } from "./schemas/venture";
 
 // THE one place that defines the flow: the order of the pages and when each page lets the user continue.
 // The layout reads this to know what "Next" and "Back" do, so pages never have to tell the layout anything.
@@ -24,8 +25,17 @@ export const VENTURE_FLOW_STEPS: VentureFlowStep[] = [
     // the same zod schemas the forms use decide whether "Next" works, so the two can never disagree
     { route: "/listingNameAndDescription", canProceed: (d) => listingTextSchema.safeParse({ listingName: d.listingName ?? "", listingDescription: d.listingDescription ?? "" }).success },
     { route: "/finalListingDetails", canProceed: (d) => listingAddressSchema.safeParse(d.address ?? {}).success },
-    { route: "/listingFlowGratitude" ,  canProceed: () => true},
-    { route: "/ventureInfoOne" , canProceed : () => true}
+    // Thank you page after listing is complete
+    { route: "/listingFlowGratitude", canProceed: () => true },
+    // Venture setup flow - starts after the listing is complete
+    { route: "/ventureInfoOne",      canProceed: () => true },
+    { route: "/hostLegalName",       canProceed: (d) => legalNameSchema.safeParse({ legalFirstName: d.legalFirstName ?? "", legalLastName: d.legalLastName ?? "" }).success },
+    { route: "/hostIdNumber",        canProceed: (d) => idSchema.safeParse({ idCountry: d.idCountry ?? "", idType: d.idType ?? "national_id", idNumber: d.idNumber ?? "" }).success },
+    { route: "/ventureName",         canProceed: (d) => ventureNameFormSchema.safeParse({ ventureName: d.ventureName ?? "" }).success },
+    // optional: cover photo is not required
+    { route: "/ventureCoverPhoto",   canProceed: () => true },
+    { route: "/hostContactDetails",  canProceed: (d) => contactSchema.safeParse({ phoneCountry: d.contactPhone?.country ?? "", phone: d.contactPhone?.number ?? "", email: d.contactEmail ?? "" }).success },
+    { route: "/reviewAndPublish",    canProceed: () => true },
 ];
 
 export const WELCOME_ROUTE = "/welcomePage";

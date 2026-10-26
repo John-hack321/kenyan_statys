@@ -1,12 +1,16 @@
 import { Href, usePathname, useRouter } from "expo-router";
 import { useVentureDraftStore } from "@/app_state/ventureFlowStore";
 import { VENTURE_FLOW_STEPS, WELCOME_ROUTE } from "@/constants/ventureFlowSteps";
+import { useAuthContext } from "@/lib/hooks/auth-context";
+import { useRequireAuth } from "@/lib/hooks/use-require-auth";
 
 // Works out which page we are on and what Next / Back should do.
 export function useVentureFlow() {
     const pathname = usePathname();
     const router = useRouter();
     const draft = useVentureDraftStore((s) => s.draft);
+    const { isLoggedIn } = useAuthContext();
+    const requireAuth = useRequireAuth();
 
     const total = VENTURE_FLOW_STEPS.length;
     const index = VENTURE_FLOW_STEPS.findIndex((s) => pathname.endsWith(s.route));
@@ -18,7 +22,9 @@ export function useVentureFlow() {
     const goNext = () => {
         if (!canProceed) return;
         if (isLast) {
-            // TODO: last page reached -> this is where "create account + create venture" will start
+            // The draft is complete. Now we need an account: signed-in hosts go straight on, everyone else
+            // signs in or signs up first and then lands on the same page (requireAuth remembers it).
+            requireAuth(() => router.replace("/host-setup" as Href));
             return;
         }
         router.replace(VENTURE_FLOW_STEPS[index + 1].route as Href);
@@ -34,6 +40,7 @@ export function useVentureFlow() {
         progress: index >= 0 ? (index + 1) / total : 0,
         canProceed,
         isLast,
+        nextLabel: isLast ? (isLoggedIn ? "Continue" : "Create account") : "Next",
         goNext,
         goBack,
     };
