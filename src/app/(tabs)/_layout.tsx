@@ -1,5 +1,4 @@
-import { SafeAreaView } from "react-native-safe-area-context";
-import {Text, View } from "react-native";
+import { View, Text } from "react-native";
 import { Ionicons } from '@expo/vector-icons';
 import ProtectedRoute from "@/components/protectedRoute";
 import { Slot, Tabs } from "expo-router";
@@ -19,13 +18,13 @@ interface TabBarIconProps {
 }
 
 const TabBarIcon = ({focused, iconName, title} : TabBarIconProps) => (
-    <View className = "items-center flex min-w-20 justify-center min-h-full gap-1 mt-12">
-        <Ionicons 
-            name={iconName} 
-            size={24} 
-            color={focused ? "#064D30" : "#5D5F6D"} 
+    <View className="items-center justify-center gap-1 flex-1" style={{ width: 70 }}>
+        <Ionicons
+            name={iconName}
+            size={24}
+            color={focused ? "#064D30" : "#5D5F6D"}
         />
-        <Text className={cn('text-sm font-bold' , focused ? 'text-dark-green-ascents' : 'text-gray-200')}>
+        <Text className={cn('text-sm font-bold' , focused ? 'text-dark-green-ascents' : 'text-gray-200')} numberOfLines={1}>
             {title}
         </Text>
     </View>
@@ -36,13 +35,13 @@ export default function TabsLayout () {
     const mode = modeStore((state) => state.mode)
 
     return (
-        <SafeAreaView className="h-full bg-white"> {/* we have to make this bg white so that the status bar and navigation background become white like the app .  */}
-
+        <View style={{ flex: 1, backgroundColor: "white" }}>
             <StatusBar style="dark"/>
             <Tabs
                 screenOptions={{
                     headerShown: false,
                     tabBarShowLabel: false,
+                    sceneStyle: { backgroundColor: "white" },
                     tabBarStyle: {
                         borderTopLeftRadius: 50,
                         borderTopRightRadius: 50,
@@ -52,6 +51,8 @@ export default function TabsLayout () {
                         height: 70,
                         position: "absolute",
                         bottom: 10,
+                        left: 0,
+                        right: 0,
                         backgroundColor: "white",
                         shadowColor: "#1a1a1a",
                         shadowOffset: {width: 0 , height: 2},
@@ -77,7 +78,6 @@ export default function TabsLayout () {
                 
             
             </Tabs>
-
-        </SafeAreaView>
+        </View>
     )
 }

@@ -129,19 +129,19 @@ const ReviewAndPublishPage = () => {
                         </>
                     )}
 
-                    <View className="rounded-2xl bg-brand-soft" style={{ padding: rs(14), gap: rv(8) }}>
-                        <AppText variant="small" weight="semibold">What happens next</AppText>
+                    <View className="rounded-2xl bg-gray-50 border border-gray-200" style={{ padding: rs(14), gap: rv(8) }}>
+                        <AppText variant="small" weight="semibold" className="text-dark-green-ascents">What happens next</AppText>
                         {nextSteps.map((step, i) => (
                             <View key={step} className="flex-row items-center" style={{ gap: rs(10) }}>
-                                <View className="items-center justify-center rounded-full bg-dark-green-ascents" style={{ height: rm(22), width: rm(22) }}>
-                                    <AppText variant="caption" weight="bold" className="text-white">{i + 1}</AppText>
+                                <View className="items-center justify-center rounded-full bg-gray-200" style={{ height: rm(22), width: rm(22) }}>
+                                    <AppText variant="caption" weight="bold" className="text-dark-green-ascents">{i + 1}</AppText>
                                 </View>
                                 <AppText variant="small" style={{ flex: 1 }}>{step}</AppText>
                             </View>
                         ))}
                         {isLoggedIn && !hasVenture && (
                             <View className="flex-row items-center" style={{ gap: rs(6), marginTop: rv(2) }}>
-                                <Ionicons name="checkmark-circle" size={rm(14)} color={COLORS.green} />
+                                <Ionicons name="checkmark-circle" size={rm(14)} color={COLORS.muted} />
                                 <AppText variant="caption" className="text-gray-600">You're already signed in, so step 1 is done.</AppText>
                             </View>
                         )}

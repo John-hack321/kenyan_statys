@@ -1,5 +1,10 @@
 import "../../global.css";
 
+import { cssInterop } from "nativewind";
+import { SafeAreaView } from "react-native-safe-area-context";
+
+cssInterop(SafeAreaView, { className: "style" });
+
 import { Stack } from "expo-router";
 import AuthProvider from "../../providers/auth-provider";
 import { SplashScreenController } from "@/components/splash-screen-controller";

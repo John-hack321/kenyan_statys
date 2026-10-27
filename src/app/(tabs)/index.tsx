@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from 'react'
 import { ActivityIndicator, FlatList, Text, View } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useListingsStore } from '@/app_state/listing_store'
 import { loadListings, loadMoreListings } from '@/api/listings'
 import Search from '@/components/search'
@@ -8,7 +9,8 @@ import { rv, rs, rm } from '@/styles/responsive'
 import { FeaturedCard, ListingCard } from '@/components/listing_cards'
 
 export default function Home() {
-    const items = useListingsStore((s) => s.items) // listing data from zustand 
+    const insets = useSafeAreaInsets()
+    const items = useListingsStore((s) => s.items) // listing data from zustand
 
     const isLoading = useListingsStore((s) => s.isLoading)
     const isRefreshing = useListingsStore((s) => s.isRefreshing)
@@ -33,7 +35,7 @@ export default function Home() {
         <ListingCard item={item} onPress={()=> {}} />
     )}
     keyExtractor={(item) => item.id}
-    contentContainerClassName="pb-32 bg-white"
+    contentContainerStyle={{ paddingTop: insets.top, paddingBottom: 160 }}
     columnWrapperClassName="flex gap-5 px-5"
     showsVerticalScrollIndicator={false}
     ListEmptyComponent={
