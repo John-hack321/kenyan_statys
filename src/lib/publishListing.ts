@@ -81,16 +81,16 @@ export async function publishDraft(draft: BecomeAHostVentureDraft, hasVenture: b
         venture: hasVenture
             ? null
             : {
-                  name: draft.ventureName,
-                  cover_path: coverPath ?? null,
-                  legal_first_name: draft.legalFirstName,
-                  legal_last_name: draft.legalLastName,
-                  id_country: draft.idCountry,
-                  id_type: draft.idType,
-                  id_last4: (draft.idNumber ?? "").slice(-4),
-                  contact_phone: draft.contactPhone ? toE164(draft.contactPhone.country, draft.contactPhone.number) : null,
-                  contact_email: draft.contactEmail ?? null,
-              },
+                    name: draft.ventureName,
+                    cover_path: coverPath ?? null,
+                    legal_first_name: draft.legalFirstName,
+                    legal_last_name: draft.legalLastName,
+                    id_country: draft.idCountry,
+                    id_type: draft.idType,
+                    id_last4: (draft.idNumber ?? "").slice(-4),
+                    contact_phone: draft.contactPhone ? toE164(draft.contactPhone.country, draft.contactPhone.number) : null,
+                    contact_email: draft.contactEmail ?? null,
+                },
     };
 
     const { data, error } = await supabase.rpc("publish_listing", { p: payload });
