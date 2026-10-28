@@ -1,7 +1,6 @@
-import { TouchableOpacity, View, Text, ActivityIndicator } from "react-native"
 import GoogleIcon from "@/components/google-icon"
+import AuthOptionRow from "./AuthOptionRow"
 import { GoogleSignInButtonProps } from "@/constants/type"
-import { rv } from "@/styles/responsive"
 
 import { supabase } from '@/lib/supabase'
 import * as WebBrowser from 'expo-web-browser'
@@ -22,7 +21,9 @@ function extractParamsFromUrl(url: string) {
     }
 }
 
-const GoogleSignInButton = ({ styles, text }: GoogleSignInButtonProps) => {
+// `loginHint` (optional): Google pre-selects that account, e.g. the email the host typed earlier.
+// It is only a hint: the person can still pick another account.
+const GoogleSignInButton = ({ text, loginHint, sublabel, badge }: GoogleSignInButtonProps) => {
     const [isLoading, setIsloading] = useState(false)
 
     async function onSignInButtonPress() {
@@ -36,7 +37,10 @@ const GoogleSignInButton = ({ styles, text }: GoogleSignInButtonProps) => {
                 provider: 'google',
                 options: {
                     redirectTo,
-                    queryParams: { prompt: 'consent' },
+                    queryParams: loginHint
+                        // a hint only pre-selects; select_account makes sure the person can still pick another account
+                        ? { prompt: 'select_account', login_hint: loginHint }
+                        : { prompt: 'consent' },
                     skipBrowserRedirect: true,
                 },
             })
@@ -85,16 +89,14 @@ const GoogleSignInButton = ({ styles, text }: GoogleSignInButtonProps) => {
     }, [])
 
     return (
-        <TouchableOpacity onPress={onSignInButtonPress} className={` ${styles}`}>
-            {isLoading ? (
-                <ActivityIndicator size="small" color="black" />
-            ) : (
-                <View className="flex flex-row items-center justify-center" style={{ gap: rv(8) }}>
-                    <GoogleIcon size={rv(18)} />
-                    <Text className="text-[#1F1F1F] font-bold">{text}</Text>
-                </View>
-            )}
-        </TouchableOpacity>
+        <AuthOptionRow
+            label={text}
+            sublabel={sublabel}
+            badge={badge}
+            icon={<GoogleIcon size={20} />}
+            loading={isLoading}
+            onPress={onSignInButtonPress}
+        />
     )
 }
 

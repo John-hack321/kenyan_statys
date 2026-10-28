@@ -1,83 +1,79 @@
-import { View, Text } from "react-native";
-import { Ionicons } from '@expo/vector-icons';
-import ProtectedRoute from "@/components/protectedRoute";
-import { Slot, Tabs } from "expo-router";
+import { Text, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { Tabs } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { COLORS } from "@/styles/colors";
 
-import { modeStore } from "@/app_state/user_store";
+const TAB_HEIGHT = 68;
 
-import { cn } from "@/lib/utils";
-import { useState } from "react";
-
-
-
-interface TabBarIconProps {
+type TabBarIconProps = {
     focused: boolean;
     iconName: keyof typeof Ionicons.glyphMap;
     title: string;
-}
+};
 
-const TabBarIcon = ({focused, iconName, title} : TabBarIconProps) => (
-    <View className="items-center justify-center gap-1 flex-1" style={{ width: 70 }}>
-        <Ionicons
-            name={iconName}
-            size={24}
-            color={focused ? "#064D30" : "#5D5F6D"}
-        />
-        <Text className={cn('text-sm font-bold' , focused ? 'text-dark-green-ascents' : 'text-gray-200')} numberOfLines={1}>
+// Icon on top, label under it, the whole group centred. No flex-1: that is what pushed it up.
+const TabBarIcon = ({ focused, iconName, title }: TabBarIconProps) => (
+    <View style={{  width: 72, alignItems: "center", justifyContent: "center" }}>
+        <Ionicons name={iconName} size={24} color={focused ? COLORS.green : "#5D5F6D"} />
+        <Text
+            numberOfLines={1}
+            style={{ marginTop: 2, fontSize: 12, fontWeight: "700", color: focused ? COLORS.green : "#5D5F6D" }}
+        >
             {title}
         </Text>
     </View>
-)
+);
 
-export default function TabsLayout () {
-
-    const mode = modeStore((state) => state.mode)
+export default function TabsLayout() {
+    const insets = useSafeAreaInsets();
 
     return (
         <View style={{ flex: 1, backgroundColor: "white" }}>
-            <StatusBar style="dark"/>
+            <StatusBar style="dark" />
             <Tabs
                 screenOptions={{
                     headerShown: false,
                     tabBarShowLabel: false,
                     sceneStyle: { backgroundColor: "white" },
                     tabBarStyle: {
-                        borderTopLeftRadius: 50,
-                        borderTopRightRadius: 50,
-                        borderBottomLeftRadius: 50,
-                        borderBottomRightRadius: 50,
-                        marginHorizontal: 20,
-                        height: 70,
                         position: "absolute",
-                        bottom: 10,
-                        left: 0,
-                        right: 0,
+                        left: 20,
+                        marginLeft: 20,
+                        marginRight: 20,
+                        right: 20,
+                        bottom: insets.bottom + 12, // floats above the gesture bar / curved corners
+                        height: TAB_HEIGHT,
+                        borderRadius: TAB_HEIGHT / 2,
+                        borderTopWidth: 0,
                         backgroundColor: "white",
+                        paddingTop: 0,
+                        paddingBottom: 0, // kills the default safe-area padding
+                        paddingHorizontal: 8,
                         shadowColor: "#1a1a1a",
-                        shadowOffset: {width: 0 , height: 2},
+                        shadowOffset: { width: 0, height: 2 },
                         shadowOpacity: 0.1,
                         shadowRadius: 4,
-                        elevation: 5,
-                    }
+                        elevation: 8,
+                    },
+                    tabBarItemStyle: {
+                        height: TAB_HEIGHT,
+                        paddingVertical: 14,
+                        justifyContent: "center",
+                        alignItems: "center",
+                    },
                 }}
             >
-                    <Tabs.Screen
-                        name="index"
-                        options={{
-                            tabBarIcon: ({focused}) => <TabBarIcon  focused={focused} iconName="home" title="home"/>
-                        }}
-                    />
-    
-                    <Tabs.Screen
-                        name="profile"
-                        options={{
-                            tabBarIcon: ({focused}) => <TabBarIcon focused={focused} iconName="person" title="profile"/>
-                        }}
-                    />
-                
-            
+                <Tabs.Screen
+                    name="index"
+                    options={{ tabBarIcon: ({ focused }) => <TabBarIcon focused={focused} iconName="home" title="Home" /> }}
+                />
+                <Tabs.Screen
+                    name="profile"
+                    options={{ tabBarIcon: ({ focused }) => <TabBarIcon focused={focused} iconName="person" title="Profile" /> }}
+                />
             </Tabs>
         </View>
-    )
+    );
 }

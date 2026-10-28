@@ -92,9 +92,9 @@ const ListingPricePage = () => {
                         </View>
                     </View>
 
-                    <View className="flex-row rounded-2xl bg-brand-soft" style={{ padding: rs(14), gap: rs(10) }}>
+                    <View className="flex-row rounded-2xl bg-[#EEF5F0]" style={{ padding: rs(14), gap: rs(10) }}>
                         <Ionicons name="time-outline" size={rm(18)} color={COLORS.green} />
-                        <AppText variant="small" className="text-gray-700" style={{ flex: 1 }}>
+                            <AppText variant="small" className="text-gray-700" style={{ flex: 1 }}>
                             Check-in is from 3 PM and check-out is by 11 AM. Two nights means one full day in between.
                         </AppText>
                     </View>

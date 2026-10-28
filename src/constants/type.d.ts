@@ -9,8 +9,11 @@ export interface CustomInputProps {
 
 
 export interface GoogleSignInButtonProps {
-    styles?: string
+    styles?: string        // kept so old callers still compile; the button now draws itself
     text: string
+    loginHint?: string     // asks Google to pre-select this account (e.g. the email typed in the host flow)
+    sublabel?: string      // small grey line under the text, e.g. "as john@gmail.com"
+    badge?: string         // small pill on the right, e.g. "Suggested"
     //onPress: () => void
 }
 

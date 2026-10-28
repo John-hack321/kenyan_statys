@@ -1,13 +1,6 @@
-import { SafeAreaView } from "react-native-safe-area-context";
 import { Slot } from "expo-router";
-import { StatusBar } from "expo-status-bar";
 
-
-export default function OnboardingLayout () {
-    return (
-        <SafeAreaView>
-            <StatusBar style="dark"/>
-            <Slot/>
-        </SafeAreaView>
-    )
+// The ModalSheet in (auth)/_layout.tsx already provides the sheet, safe areas and keyboard handling.
+export default function OnboardingLayout() {
+    return <Slot />;
 }

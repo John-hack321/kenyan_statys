@@ -58,8 +58,18 @@ function RootLayout() {
         <SplashScreenController />
         <Stack screenOptions={{ headerShown: false }} >
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          {/* to accomoadate the new guest first design we will have to show the auth screens as modals that scroll up from the bottom . */}
-          <Stack.Screen name="(auth)" options={{presentation: "modal"}} /> 
+          {/* Sign in / sign up opens as an Airbnb-style sheet OVER the current page (nothing is redirected).
+              ModalSheet draws the black top, status bar and slide animation itself. */}
+          <Stack.Screen
+            name="(auth)"
+            options={{
+              presentation: "transparentModal", // the page underneath stays mounted
+              animation: "none",                // ModalSheet animates itself
+              gestureEnabled: false,
+              statusBarTranslucent: true,
+              contentStyle: { backgroundColor: "transparent" },
+            }}
+          />
           <Stack.Screen name="(venture_and_listings_flow)" options={{headerShown: false}} />
         </Stack>
       </AuthProvider>

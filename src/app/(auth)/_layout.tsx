@@ -1,41 +1,27 @@
-import { Slot, useRouter } from "expo-router";
+import { Slot } from "expo-router";
 import { useEffect } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView } from "react-native";
-import { useAuthContext } from "../../../lib/hooks/auth-context";
+import ModalSheet, { useModalSheet } from "@/components/ModalSheet";
+import { useAuthContext } from "@/lib/hooks/auth-context";
 import { clearPendingAction, takePendingAction } from "@/lib/pending-actions";
 
-export default function SignInLayout () {
-    const { isLoggedIn, isLoading } = useAuthContext()
-    const router = useRouter()
+function AuthGate() {
+    const { isLoggedIn, isLoading } = useAuthContext();
+    const { close } = useModalSheet();
 
-    // 1) Login succeeded: close this screen, then continue what the user was doing.
+    // Login succeeded: slide down, THEN run what the user was trying to do (like, message host, publish...)
     useEffect(() => {
-        if (isLoading || !isLoggedIn) return
+        if (isLoading || !isLoggedIn) return;
+        close(takePendingAction() ?? undefined);
+    }, [isLoading, isLoggedIn, close]);
 
-        const action = takePendingAction()
-        if (router.canDismiss()) {
-            router.dismiss()          // opened as a modal on top of the app -> just close it
-        } else {
-            router.replace("/")       // opened directly (nothing under it) -> go home
-        }
-        // small delay so the screen has closed before the action navigates or shows something
-        if (action) setTimeout(action, 300)
-    }, [isLoading, isLoggedIn, router])
+    return <Slot />;
+}
 
-    // 2) Screen closed without logging in: forget the action, so it can't fire at a random later login.
-    useEffect(() => {
-        return () => clearPendingAction()
-    }, [])
-
-    if (isLoggedIn) return null   // avoids a flash of the form while closing
-
+export default function AuthLayout() {
     return (
-        <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === 'ios' ? "padding" : "height"} >
-            <ScrollView className="bg-white h-full" contentContainerClassName="flex-grow" keyboardShouldPersistTaps="handled"> 
-
-                <Slot/>
-
-            </ScrollView>
-        </KeyboardAvoidingView>
-    )
+        // closed without logging in: forget the action so it can't fire at some later login
+        <ModalSheet onClosed={clearPendingAction}>
+            <AuthGate />
+        </ModalSheet>
+    );
 }
