@@ -4,6 +4,7 @@ import { Slot, usePathname, useRouter } from "expo-router";
 import { Alert, Image, ImageBackground, useWindowDimensions, View } from "react-native";
 import { images } from "@/constants/images";
 import AppText from "@/components/AppText";
+import PublishingOverlay from "@/components/PublishingOverlay";
 import {
     BackButton,
     DiscardButton,
@@ -85,6 +86,13 @@ export default function VentureCreationLayout() {
                     />
                 </View>
             )}
+
+            {/* covers the screen while publishing: a real progress bar that follows the photo uploads */}
+            <PublishingOverlay
+                visible={flow.isPublishing}
+                progress={flow.publishProgress.value}
+                label={flow.publishProgress.label}
+            />
         </SafeAreaView>
     );
 }

@@ -1,6 +1,7 @@
 import { PropsWithChildren, useEffect, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { AuthContext } from '../lib/hooks/auth-context'
+import { consumeKeepDraft } from '../lib/pending-actions'
 import { supabase } from '../lib/supabase'
 import { refreshHostStatus } from '../src/lib/host'
 import { User, useUserStore } from '../src/app_state/user_store'
@@ -59,7 +60,8 @@ export default function AuthProvider({ children }: PropsWithChildren) {
                 resetUser() // also forgets the venture id
                 // A real sign-out: the next person on this phone must not see this person's half-finished listing.
                 // (Not on INITIAL_SESSION: a guest who is still filling in a draft has no session either.)
-                if (event === 'SIGNED_OUT') useVentureDraftStore.getState().resetDraft()
+                // Exception: "use another account" while publishing signs out on purpose and keeps the draft.
+                if (event === 'SIGNED_OUT' && !consumeKeepDraft()) useVentureDraftStore.getState().resetDraft()
             }
             setIsLoading(false)
         })

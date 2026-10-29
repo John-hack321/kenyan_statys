@@ -3,6 +3,7 @@ import { FlatList, Modal, TextInput, TouchableOpacity, View } from "react-native
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AppText from "@/components/AppText";
+import FloatingLabel from "@/components/FloatingLabel";
 import { rm, rs, rv } from "@/styles/responsive";
 import { FONT_BY_WEIGHT } from "@/styles/typography";
 
@@ -17,15 +18,16 @@ type Props = {
     value?: string;
     options: SelectOption[];
     onChange: (value: string) => void;
-    placeholder?: string;
+    placeholder?: string;           // kept so old callers compile: the big floating label does this job now
     error?: string;
     helper?: string;
     disabled?: boolean;
 };
 
-// Looks like TextField, but tapping it opens a searchable list. Use it whenever the answer must be
-// one of a fixed set (country, county), so the same place is always spelled the same way.
-export default function SelectField({ label, title, value, options, onChange, placeholder = "Select", error, helper, disabled }: Props) {
+// Looks like TextField (floating label: big while nothing is chosen, small on the border once there is a value),
+// but tapping it opens a searchable list. Use it whenever the answer must be one of a fixed set (country, county),
+// so the same place is always spelled the same way.
+export default function SelectField({ label, title, value, options, onChange, error, helper, disabled }: Props) {
     const [open, setOpen] = useState(false);
     const [query, setQuery] = useState("");
 
@@ -37,31 +39,35 @@ export default function SelectField({ label, title, value, options, onChange, pl
 
     const close = () => { setOpen(false); setQuery(""); };
 
+    const background = disabled ? "#F9FAFB" : error ? "#FEF2F2" : "white";
+    const labelColor = error ? RED : "#6B7280";
+    const padV = rv(14);
+
     return (
-        <View style={{ width: "100%" }}>
+        <View style={{ width: "100%", paddingTop: rm(8) }}>
             <TouchableOpacity
                 onPress={() => !disabled && setOpen(true)}
                 activeOpacity={0.8}
                 accessibilityRole="button"
                 accessibilityLabel={`${label}: ${selected?.label ?? "not selected"}`}
                 accessibilityState={{ disabled: !!disabled }}
-                className="flex-row items-center justify-between"
                 style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "space-between",
                     borderWidth: 1.5,
                     borderColor: error ? RED : "#D1D5DB",
                     borderRadius: rm(12),
-                    backgroundColor: disabled ? "#F9FAFB" : error ? "#FEF2F2" : "white",
+                    backgroundColor: background,
                     opacity: disabled ? 0.6 : 1,
                     paddingHorizontal: rs(14),
-                    paddingVertical: rv(8),
+                    paddingVertical: padV,
                 }}
             >
-                <View style={{ flex: 1 }}>
-                    <AppText variant="caption" weight="medium" style={{ color: error ? RED : "#6B7280" }}>{label}</AppText>
-                    <AppText variant="body" style={{ marginTop: rv(2), color: selected ? "#111" : "#9CA3AF" }} numberOfLines={1}>
-                        {selected?.label ?? placeholder}
-                    </AppText>
-                </View>
+                <FloatingLabel text={label} floated={!!selected} color={labelColor} background={background} restingTop={padV} />
+                <AppText variant="body" style={{ flex: 1, color: "#111", minHeight: rm(20) }} numberOfLines={1}>
+                    {selected?.label ?? ""}
+                </AppText>
                 <Ionicons name="chevron-down" size={rm(18)} color="#111" />
             </TouchableOpacity>
 

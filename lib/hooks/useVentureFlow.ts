@@ -11,8 +11,28 @@ import {
     withFromReview,
 } from "@/constants/ventureFlowSteps";
 import { useRequireAuth } from "@/lib/hooks/use-require-auth";
+import { signOut } from "@/lib/aut-actions";
 import { refreshHostStatus } from "@/lib/host";
-import { publishDraft } from "@/lib/publishListing";
+import { keepDraftOnNextSignOut, setPendingAction } from "@/lib/pending-actions";
+import { PublishProgress, publishDraft } from "@/lib/publishListing";
+
+type ExistingHostChoice = "add" | "switch" | "cancel";
+
+// The host signed in with an account that is ALREADY a host, after filling in the "new host" pages.
+// We never discard their work and never create a second venture: the listing is added to the venture they have.
+const askExistingHost = () =>
+    new Promise<ExistingHostChoice>((resolve) => {
+        Alert.alert(
+            "This account is already a host",
+            "Your listing will be added to your existing host profile. The host details you just typed (name, ID, venture name, contacts) won't be used.",
+            [
+                { text: "Use another account", onPress: () => resolve("switch") },
+                { text: "Cancel", style: "cancel", onPress: () => resolve("cancel") },
+                { text: "Add my listing", onPress: () => resolve("add") },
+            ],
+            { cancelable: false }
+        );
+    });
 
 // Works out which page we are on and what Next / Back should do.
 export function useVentureFlow() {
@@ -25,6 +45,7 @@ export function useVentureFlow() {
     const hasVenture = useUserStore((s) => s.ventureId !== null);
     const requireAuth = useRequireAuth();
     const [isPublishing, setIsPublishing] = useState(false);
+    const [publishProgress, setPublishProgress] = useState<PublishProgress>({ value: 0, label: "" });
 
     // a host who already has a venture only walks the listing part
     const steps = useMemo(() => getFlowSteps(hasVenture), [hasVenture]);
@@ -39,18 +60,39 @@ export function useVentureFlow() {
     // and phone are never saved on the phone: after a restart they are empty, and the host must retype them.
     const canProceed = step ? (step.isReview ? !firstIncompleteStep(steps, draft) : step.canProceed(draft)) : false;
 
+    // NOTE: `hasVenture` inside this function is the value from the moment Finish was pressed (the sign-in screen
+    // keeps this very function and runs it after login). That is on purpose: it tells us the host started as a NEW host.
     const publish = async () => {
         setIsPublishing(true);
+        setPublishProgress({ value: 0, label: "Getting ready…" });
         try {
+            // Right after a fresh login the app may not know yet whether this account is a host.
+            // Ask the database before deciding what to send.
+            await refreshHostStatus();
+            const nowHasVenture = useUserStore.getState().ventureId !== null;
+
+            if (!hasVenture && nowHasVenture) {
+                const choice = await askExistingHost();
+                if (choice === "cancel") return;
+                if (choice === "switch") {
+                    keepDraftOnNextSignOut();           // sign out on purpose, keep the half-finished listing
+                    await signOut();
+                    setPendingAction(publish);          // after the next login, publish continues by itself
+                    router.push("/sign-in");
+                    return;
+                }
+                // "add": carry on, only the listing part will be sent
+            }
+
             const current = useVentureDraftStore.getState().draft;
-            const stillHasVenture = useUserStore.getState().ventureId !== null;
-            const missing = firstIncompleteStep(getFlowSteps(stillHasVenture), current);
+            const missing = firstIncompleteStep(getFlowSteps(nowHasVenture), current);
             if (missing) {
                 Alert.alert("Something is missing", `Please finish: ${missing.label}.`);
                 router.replace(withFromReview(missing.route) as Href);
                 return;
             }
-            await publishDraft(current, stillHasVenture);
+
+            await publishDraft(current, nowHasVenture, setPublishProgress);
             await refreshHostStatus();
             router.replace("/host-setup" as Href);
             resetDraft(); // empties the draft and deletes the kept photo files
@@ -98,6 +140,7 @@ export function useVentureFlow() {
         canProceed,
         isLast,
         isPublishing,
+        publishProgress,
         fromReview,
         hasVenture,
         // The last button says "Finish" for everyone. Signed-out hosts meet the sign-in screen only AFTER

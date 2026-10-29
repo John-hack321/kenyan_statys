@@ -132,7 +132,12 @@ old_stuff/                    dead FastAPI-era auth. Ignore.
 ### 6.5 Database (Supabase)
 Tables: `profiles`, `ventures` (unique `admin_id`), `listings`, `media` (venture library), `listing_media` (carries `is_cover`), `availability`, `bookings`, `reviews`, `reports`, `conversations`, `messages`, `host_identity` (private; app can only read own status), plus `places` and `host_private` (referenced by code, **definitions not seen**).
 RLS is on for every table. SQL in the repo: `src/constants/schemas/database_schemas/{tabels,rls_policies,01_host_identity}.sql`.
-**The live database may be ahead of or behind these files.** Functions referenced by the app but not in the repo files I could see: `publish_listing`, `search_places` (and a `supabase/migrations/04_publishing.sql` mentioned in a comment). Ask the user to confirm the real schema before writing SQL that depends on it. Verification queries are in Appendix A of `AFRICAN_SPACES_PROJECT_NOTES`.
+**The live database may be ahead of or behind these files.** **Live database snapshot, verified by the user's own queries on 2026-10-29** (re-check with the queries in Appendix A of the project notes before relying on it later):
+- Exists: bucket `listing-media` (public) and `avatars` (private); tables `host_private`, `listing_private`, `places`; functions `publish_listing(jsonb)` (atomic, idempotent, validates, reuses the host's venture, writes `host_private`, `host_identity`, `listing_private`, photos) and `search_places`.
+- `listings` has (beyond the first schema): `guest_access`, `beds`, `country`, `place_id`, `region`, `area`, `check_in_time`, `check_out_time`, and **`area_pending`** (this is the DB name of the app's `area_is_new`; `publish_listing` maps it). `ventures` has `cover_media_id`.
+- Was MISSING (added by `supabase/migrations/05_publish_atomic.sql`, **once the user has run it**): table `host_identity` (the old `publish_listing` writes to it, so a new host's first publish would have crashed), `listings.awaiting_verification`, `refresh_venture_verification()` + triggers (nothing switched listings on after verification), the "one listing until verified" rule.
+- Unknown (not checked): existing storage policies on `storage.objects` (05 adds the 4 folder-scoped policies only if none mention `listing-media`), RLS state/policies on `host_private` and `listing_private`, `listing_media.position`.
+- **Lesson:** never write SQL against this database from memory. Check what exists first, then change the existing function with small edits instead of replacing it. Verification queries are in Appendix A of `AFRICAN_SPACES_PROJECT_NOTES`.
 
 ## 7. Status
 
@@ -159,7 +164,6 @@ RLS is on for every table. SQL in the repo: `src/constants/schemas/database_sche
 - `tailwind.config.js` is out of sync with `styles/colors.ts`: it lacks `warning`, `danger`, `brand-line`, and `brand-soft` there is `#0A7A4D` while `COLORS.greenSoft` is `#EEF5F0` (code uses `bg-brand-soft` and `bg-warning-soft`). Check how those render. (unverified)
 - `lib/draftFiles.ts` has `keepPhoto()` (copies picked photos out of the cache folder) but `addPhotos.tsx` and `ventureCoverPhoto.tsx` do not appear to call it, so drafted photos may be lost if Android clears the cache. (unverified)
 - Home screen: card `onPress` is empty, the search bar is not a button yet, filter chips not built, tab bar is `position: absolute` so screens need bottom padding (home uses 160).
-- **Font loading with Expo Go**: Custom fonts (Rubik) fail to download via `ExpoAsset.downloadAsync` in Expo Go, causing render errors. Temporary workaround: font loading check commented out in root layout. Proper fix: use development build (`npx expo run:android`) to bundle fonts at build time instead of downloading from Metro at runtime.
 - `ASSETS_REFERENCE.md` is stale (`apartment_image_one.jpg` is required by `constants/images.tsx` but not listed).
 - Expo app name/slug/scheme still `budget_lens` / `budgetlens`.
 - Pre-existing TS complaints: `global.css` module declaration, a few implicit anys.
@@ -192,14 +196,17 @@ RLS is on for every table. SQL in the repo: `src/constants/schemas/database_sche
 
 ## 11. Changelog (newest first)
 
-### 2026-10-28 — Tailwind setup, SafeAreaView fix, tab bar fixes, review card styling
-- **Tailwind config created**: Added `tailwind.config.js` with correct content paths (`src/**`, `lib/**`, `providers/**`) and `nativewind/preset`. This was missing, causing all Tailwind classes to be ignored.
-- **SafeAreaView cssInterop**: Registered SafeAreaView from `react-native-safe-area-context` in root layout with `cssInterop(SafeAreaView, { className: "style" })` so className works throughout the app.
-- **Tabs layout**: Replaced SafeAreaView with plain View using inline `style={{ flex: 1, backgroundColor: "white" }}` in `(tabs)/_layout.tsx` (SafeAreaView was collapsing without a definite parent height). Added `sceneStyle: { backgroundColor: "white" }` to override React Navigation's default gray background.
-- **Tab bar positioning**: Fixed icons/labels being pushed off-centre by removing `mt-12` and `min-h-full`, adding `flex-1` to TabBarIcon, and using fixed width (70px) with `numberOfLines={1}` on labels. Added `left: 0, right: 0` to tabBarStyle for proper centering with margin.
-- **Home screen padding**: Added `useSafeAreaInsets()` and set `paddingTop: insets.top, paddingBottom: 160` on FlatList contentContainerStyle to clear the floating tab bar (now that screens no longer sit in SafeAreaView).
-- **Review card styling**: Changed "What happens next" card in `reviewAndPublish.tsx` from dark green (`bg-brand-soft`) to light gray (`bg-gray-50`) with subtle border, lighter circles, and muted green accents to match the softer design reference.
-- **Font loading issue**: Encountered `ExpoAsset.downloadAsync` error with custom fonts in Expo Go. Temporarily commented out font loading check to test app. Long-term fix requires development build (`npx expo run:android`) to bundle fonts at build time.
+### 2026-10-29 — Floating labels, all-or-nothing publishing, host-state decisions
+- **Fields:** `TextField`, `PhoneField`, `SelectField` now use a floating label (`FloatingLabel.tsx`): big inside the box while empty, shrinks onto the border on focus/value. `PhoneField` keeps the label on the border always (the country code is always visible). The placeholder only shows once the label has floated. Every new field must use these components.
+- **Publishing is atomic:** photos upload to Storage first (own folder `<uid>/<publishId>/…`, retry overwrites), then ONE `publish_listing(p jsonb)` call = one Postgres transaction (all or nothing). Same `publishId` = same listing id, so a retry returns the existing listing. SQL: `supabase/migrations/05_publish_atomic.sql` (bucket + storage policies, `listing_private`, `host_private`, new `listings` columns, `publish_listing`, `refresh_venture_verification`, triggers). **Written without access to the live DB and not yet run (unverified).**
+- **Decisions:**
+  - Signing in never needs an "account exists?" check (Supabase signs in or creates; an exists-check leaks who has accounts).
+  - New host → venture + first listing are created together, both **hidden** (`ventures.is_verified = false`, `listings.awaiting_verification = true`, `is_active = false`) until email + phone + ID are confirmed; then triggers switch them on automatically. Only the server flips this.
+  - Account that signs in is **already a host** → never discard, never create a 2nd venture: ask (Add my listing / Use another account / Cancel); venture details in the payload are ignored server-side too.
+  - Unverified host may have only ONE listing; more are refused by `publish_listing` (client UI for this still to do).
+  - Public coordinates are rounded to ~1 km; exact address/pin live in `listing_private`. Contact phone/email live in `host_private`, never in `ventures.phone` (ventures are public).
+- **Publish flow changes:** `useVentureFlow.publish` now awaits `refreshHostStatus()` first (right after login the host state was not loaded yet, a race). `keepDraftOnNextSignOut()` lets "use another account" sign out without wiping the draft (`lib/pending-actions.ts`, `providers/auth-provider.tsx`).
+- **Loading screen:** `PublishingOverlay` = full-screen dark overlay with a determinate progress bar driven by real upload progress (`publishDraft(..., onProgress)`). Chosen over a spinner (no sense of progress) and over a fake "slowly filling" bar (stalls at 90%). Lottie not used; keep it for a success moment later.
 
 ### 2026-10-28 — Sign-in sheet, nav bar, build log
 - **Nav bar** (`(tabs)/_layout.tsx`): icons/labels were pushed off-centre by `flex-1` and the default safe-area padding. Now a floating pill (`bottom = insets.bottom + 12`, zero padding, centred items). "Profile" label colour fixed.

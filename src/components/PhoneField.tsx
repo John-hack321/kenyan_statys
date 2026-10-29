@@ -3,6 +3,7 @@ import { TextInput, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import AppText from "@/components/AppText";
 import { CountryCodePicker } from "@/components/CountryCodePicker";
+import FloatingLabel from "./FloatingLabel";
 import { COUNTRIES, DEFAULT_COUNTRY } from "@/constants/countryCodes";
 import { rm, rs, rv } from "@/styles/responsive";
 import { FONT_BY_WEIGHT } from "@/styles/typography";
@@ -24,7 +25,8 @@ type Props = {
     onSubmitEditing?: () => void;
 };
 
-// Same look as TextField (label inside, border turns green / red), with a country code picker on the left.
+// Same look as TextField. The country code is always visible, so the label stays on the border all the time
+// (nothing to float: the box is never "empty").
 export default function PhoneField({
     label, countryCode, onCountryChange, value, onChangeText, onBlur, error, helper, placeholder = "712 345 678", inputRef, onSubmitEditing,
 }: Props) {
@@ -32,23 +34,23 @@ export default function PhoneField({
     const country = COUNTRIES.find((c) => c.code === countryCode) ?? DEFAULT_COUNTRY;
     const borderColor = error ? RED : focused ? GREEN : "#D1D5DB";
     const labelColor = error ? RED : focused ? GREEN : "#6B7280";
+    const background = error ? "#FEF2F2" : "white";
 
     return (
-        <View style={{ width: "100%" }}>
+        <View style={{ width: "100%", paddingTop: rm(8) }}>
             <View
                 style={{
                     borderWidth: 1.5,
                     borderColor,
                     borderRadius: rm(12),
-                    backgroundColor: error ? "#FEF2F2" : "white",
+                    backgroundColor: background,
                     paddingHorizontal: rs(14),
-                    paddingTop: rv(8),
-                    paddingBottom: rv(8),
+                    paddingVertical: rv(11),
                 }}
             >
-                <AppText variant="caption" weight="medium" style={{ color: labelColor }}>{label}</AppText>
+                <FloatingLabel text={label} floated color={labelColor} background={background} restingTop={0} />
 
-                <View className="flex-row items-center" style={{ marginTop: rv(2), gap: rs(10) }}>
+                <View className="flex-row items-center" style={{ gap: rs(10) }}>
                     <CountryCodePicker value={country} onChange={(c) => onCountryChange(c.code)} />
                     <View style={{ width: 1, alignSelf: "stretch", backgroundColor: "#E5E7EB" }} />
                     <TextInput

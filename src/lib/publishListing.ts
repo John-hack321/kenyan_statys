@@ -12,6 +12,8 @@ const extensionOf = (uri: string) => {
     return MIME[ext] ? ext : "jpg";
 };
 
+export type PublishProgress = { value: number; label: string };   // value: 0 to 1
+
 async function uploadPhoto(photo: DraftPhoto, path: string) {
     const ext = extensionOf(photo.uri);
     const body = await (await fetch(photo.uri)).arrayBuffer();
@@ -19,19 +21,37 @@ async function uploadPhoto(photo: DraftPhoto, path: string) {
     if (error) throw new Error(`Could not upload a photo: ${error.message}`);
 }
 
-// 3 at a time: kind to slow mobile data, quicker than one by one
-async function uploadAll(jobs: { photo: DraftPhoto; path: string }[]) {
+// 3 at a time: kind to slow mobile data, quicker than one by one. `onEach` fires after every finished photo.
+async function uploadAll(jobs: { photo: DraftPhoto; path: string }[], onEach: (done: number, total: number) => void) {
+    let done = 0;
     for (let i = 0; i < jobs.length; i += 3) {
-        await Promise.all(jobs.slice(i, i + 3).map((j) => uploadPhoto(j.photo, j.path)));
+        await Promise.all(
+            jobs.slice(i, i + 3).map(async (j) => {
+                await uploadPhoto(j.photo, j.path);
+                onEach(++done, jobs.length);
+            })
+        );
     }
 }
 
 export type PublishResult = { listingId: string; ventureId: string; isActive: boolean };
 
-// Uploads the photos, then makes ONE call to publish_listing() in Supabase, which saves everything or nothing.
-// Safe to call again after a failure: the same listing id is reused (see `publishId`), photos are overwritten.
+// Why it is built this way (all-or-nothing):
+//   1. Photos go to Storage FIRST, into a folder named after `publishId`. Storage is a separate system, so it can't
+//      be part of a database transaction. A photo left behind by a failed attempt is harmless: a retry overwrites it.
+//   2. Then ONE call to publish_listing() in Supabase. A Postgres function runs as a single transaction, so the
+//      venture, listing, photo records and private details are saved together or not at all.
+//   3. Retrying is safe: the same `publishId` is the listing id, so the server returns the existing listing instead
+//      of creating a second one.
 // `hasVenture` = the host already has a venture, so only the listing part is sent.
-export async function publishDraft(draft: BecomeAHostVentureDraft, hasVenture: boolean): Promise<PublishResult> {
+// `onProgress` drives the progress bar on the publishing screen.
+export async function publishDraft(
+    draft: BecomeAHostVentureDraft,
+    hasVenture: boolean,
+    onProgress?: (p: PublishProgress) => void
+): Promise<PublishResult> {
+    onProgress?.({ value: 0.02, label: "Getting ready…" });
+
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) throw new Error("Please sign in to publish.");
     const uid = session.user.id;
@@ -48,7 +68,10 @@ export async function publishDraft(draft: BecomeAHostVentureDraft, hasVenture: b
     const cover = !hasVenture ? draft.ventureCover : undefined;
     const coverPath = cover ? `${uid}/venture/${cover.id}.${extensionOf(cover.uri)}` : undefined;
 
-    await uploadAll([...photoJobs, ...(cover && coverPath ? [{ photo: cover, path: coverPath }] : [])]);
+    await uploadAll([...photoJobs, ...(cover && coverPath ? [{ photo: cover, path: coverPath }] : [])], (done, total) => {
+        // uploads take the bar from 5% to 85%
+        onProgress?.({ value: 0.05 + 0.8 * (done / total), label: `Uploading photos (${done} of ${total})` });
+    });
 
     const a = draft.address ?? {};
     const pin = draft.listingLocationCordinates;
@@ -93,7 +116,10 @@ export async function publishDraft(draft: BecomeAHostVentureDraft, hasVenture: b
                 },
     };
 
+    onProgress?.({ value: 0.92, label: "Saving your listing…" });
     const { data, error } = await supabase.rpc("publish_listing", { p: payload });
     if (error) throw new Error(error.message);
+
+    onProgress?.({ value: 1, label: "Done" });
     return { listingId: data.listing_id, ventureId: data.venture_id, isActive: !!data.is_active };
 }
