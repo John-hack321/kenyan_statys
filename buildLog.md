@@ -9,7 +9,8 @@
 > 2. If a change makes another section wrong (architecture, conventions, known issues), fix that section too. Do not only append.
 > 3. Mark anything you did not verify as **(unverified)**. Never state that something runs or exists in Supabase unless the user confirmed it.
 >
-> `AFRICAN_SPACES_PROJECT_NOTES` (project notes, last updated 2026-10-10) is an older, deeper reference for auth, RLS and the database. Where it conflicts with this file or with the code, the code wins, then this file.
+> **Related files (read in this order):** `AGENTS.md` (rules every AI must follow), this file, **`DATABASE.md` (strict Supabase/SQL rules, what really exists in the database, migration log)**, `HOST_GUEST_PLAN.md` (host vs guest app structure).
+> `AFRICAN_SPACES_PROJECT_NOTES` (project notes, last updated 2026-10-10) is an older, deeper reference for auth, RLS and the database. Where it conflicts with this file, `DATABASE.md` or the code, the code wins, then these files. For anything about the database, `DATABASE.md` is the source of truth.
 
 ---
 
@@ -196,9 +197,19 @@ RLS is on for every table. SQL in the repo: `src/constants/schemas/database_sche
 
 ## 11. Changelog (newest first)
 
+### 2026-10-29 (later) — Host/guest foundation, policy files
+- **Decision (see `HOST_GUEST_PLAN.md`):** ONE tab navigator `(tabs)` for everybody; tabs change with the mode. All screens are declared and the ones outside the mode are hidden with `href: null` (Expo Router makes every file a tab). Shared screens (Profile, later Messages) exist once. Host-only screens pushed over the tabs will live in a `(host)` group with a guard layout (not built yet). `(venture_and_listings_flow)` and `(auth)` stay separate.
+- **Two ideas:** `isHost` = the ACCOUNT owns a venture (database, cached as `ventureId`); `mode` = the side being viewed (`modeStore`). Effective mode is `useAppMode()`: host mode only if `isHost && mode === "host"`. Mode resets to guest on sign-out. Neither is security.
+- **Built (NOT tested):** `user_store.ts` (`ventureVerified`, `devForceHost`, `setVentureStatus`, mode reset, `partialize`), `src/lib/useAppMode.ts`, `src/lib/host.ts` (also reads `is_verified`), `(tabs)/_layout.tsx` (mode-based tabs + redirect safety net), `HostOnly`, `FinishSetupCard`, `HostPlaceholder`, placeholder tabs `host-dashboard` / `host-listings` / `host-bookings`, `profile.tsx` (mode switch, setup card, dev toggle), `host-setup.tsx` (neutral title, "I'll do this later" to Profile).
+- **Dev toggle:** `devForceHost` makes the UI act like a host in development builds only (`__DEV__`), never saved. It must never be used for data or publishing: `useVentureFlow` reads `ventureId` directly. Easier route: sign in with the seed account that owns "Okello Stays" (a real host).
+- **"Finish setting up" card** shows when `ventureVerified === false` (loading = null does not show it). It opens `/host-setup`; what the steps do is still to build.
+- **Removed:** the unused "Country Code" demo picker from the Profile screen.
+- **New policy files:** `AGENTS.md` (MUST / MUST NOT for every AI), `DATABASE.md` (strict Supabase/SQL rules, VERIFIED/REPORTED/UNVERIFIED registry, migration log, ORM-to-Supabase translation). Upload `AGENTS.md`, `BUILD_LOG.md`, `DATABASE.md` and `HOST_GUEST_PLAN.md` to the Claude Project files so every chat sees them.
+- **Known follow-ups:** `(host)` group + guard when the first pushed host screen is built; host listings need an owner select policy on `listings` (unverified, see `DATABASE.md` 4.3); "Add a new listing" should be disabled for unverified hosts; migration 05 still NOT RUN.
+
 ### 2026-10-29 — Floating labels, all-or-nothing publishing, host-state decisions
 - **Fields:** `TextField`, `PhoneField`, `SelectField` now use a floating label (`FloatingLabel.tsx`): big inside the box while empty, shrinks onto the border on focus/value. `PhoneField` keeps the label on the border always (the country code is always visible). The placeholder only shows once the label has floated. Every new field must use these components.
-- **Publishing is atomic:** photos upload to Storage first (own folder `<uid>/<publishId>/…`, retry overwrites), then ONE `publish_listing(p jsonb)` call = one Postgres transaction (all or nothing). Same `publishId` = same listing id, so a retry returns the existing listing. SQL: `supabase/migrations/05_publish_atomic.sql` (bucket + storage policies, `listing_private`, `host_private`, new `listings` columns, `publish_listing`, `refresh_venture_verification`, triggers). **Written without access to the live DB and not yet run (unverified).**
+- **Publishing is atomic:** photos upload to Storage first (own folder `<uid>/<publishId>/…`, retry overwrites), then ONE `publish_listing(p jsonb)` call = one Postgres transaction (all or nothing). Same `publishId` = same listing id, so a retry returns the existing listing. SQL: `supabase/migrations/05_publish_atomic.sql`. **The first version of this file was written blind and was WRONG for the real database (it would have replaced the existing `publish_listing` with one using different column names). It was rewritten after the live DB was checked (see the snapshot in section 6.5): it now only adds `host_identity`, `awaiting_verification`, `refresh_venture_verification()` + triggers, three small changes to the existing `publish_listing`, and storage policies if none exist. Not run yet until the user confirms (unverified).**
 - **Decisions:**
   - Signing in never needs an "account exists?" check (Supabase signs in or creates; an exists-check leaks who has accounts).
   - New host → venture + first listing are created together, both **hidden** (`ventures.is_verified = false`, `listings.awaiting_verification = true`, `is_active = false`) until email + phone + ID are confirmed; then triggers switch them on automatically. Only the server flips this.

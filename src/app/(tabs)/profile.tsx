@@ -1,20 +1,24 @@
-import { Text, TouchableOpacity, View } from "react-native";
-import { useState } from 'react';
+import { ScrollView, Switch, Text, TouchableOpacity, View } from "react-native";
 import { Image } from 'expo-image';
-import { useRouter } from 'expo-router';
-import { CountryCodePicker } from '@/components/CountryCodePicker';
-import { DEFAULT_COUNTRY } from '@/constants/countryCodes';
-import { useIsHost, useUserStore } from '@/app_state/user_store';
+import { Href, useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useUserStore } from '@/app_state/user_store';
 import { signOut } from "@/lib/aut-actions";
 import { useAuthContext } from '../../../lib/hooks/auth-context';
+import { useAppMode } from "@/lib/hooks/useAppMode";
+import AppText from "@/components/AppText";
 import TextButton from "@/components/TextButton";
-
-import { Ionicons } from '@expo/vector-icons';
+import FinishSetupCard from "@/components/host/FinishSetupCard";
+import { COLORS } from "@/styles/colors";
+import { rm, rs, rv } from "@/styles/responsive";
 
 const Profile = () => {
-    const [country, setCountry] = useState(DEFAULT_COUNTRY);
+    const insets = useSafeAreaInsets();
     const user = useUserStore((state) => state.user);
-    const isHost = useIsHost();
+    const devForceHost = useUserStore((s) => s.devForceHost);
+    const setDevForceHost = useUserStore((s) => s.setDevForceHost);
+    const { isHost, isHostMode, setMode } = useAppMode();
     const { isLoggedIn, isLoading } = useAuthContext();
     const router = useRouter();
 
@@ -23,6 +27,12 @@ const Profile = () => {
     // first time hosts see the welcome page; hosts who already have a venture go straight to the listing questions
     const handleBecomeAHostButtonPress = () => router.push("/welcomePage");
     const handleAddListingPress = () => router.push("/listingTypeChoice");
+
+    // Switching sides: change the mode, then go to that side's start screen (the tabs layout also guards this)
+    const switchTo = (next: "host" | "guest") => {
+        setMode(next);
+        router.replace((next === "host" ? "/host-dashboard" : "/") as Href);
+    };
 
     // Guest view: the tab is still reachable, it just asks them to sign in.
     if (!isLoggedIn) {
@@ -68,35 +78,65 @@ const Profile = () => {
     }
 
     return (
-        <View className="p-5">
-            <Text className="text-lg font-bold mb-4">Profile Settings</Text>
+        <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingTop: insets.top + rv(16), paddingHorizontal: rs(20), paddingBottom: 160, gap: rv(16) }}
+        >
+            <AppText variant="heading">Profile</AppText>
 
-            <View className="mb-6 flex-row items-center" style={{ gap: 12 }}>
+            <View className="flex-row items-center" style={{ gap: rs(12) }}>
                 {user?.avatarUrl ? (
                     <Image source={{ uri: user.avatarUrl }} style={{ width: 56, height: 56, borderRadius: 28 }} />
                 ) : null}
-                <View>
-                    <Text className="text-base font-bold">{user?.fullName ?? "No name yet"}</Text>
-                    <Text className="text-sm text-gray-600">{user?.email}</Text>
+                <View style={{ flex: 1 }}>
+                    <AppText variant="large" weight="semibold">{user?.fullName ?? "No name yet"}</AppText>
+                    <AppText variant="small" className="text-gray-600">{user?.email}</AppText>
                 </View>
             </View>
 
-            <View className="mb-4">
-                <Text className="text-sm text-gray-600 mb-2">Country Code</Text>
-                <CountryCodePicker value={country} onChange={setCountry} />
-            </View>
+            {/* hosts who still have to verify: the card opens the checklist (does nothing for verified hosts and guests) */}
+            <FinishSetupCard />
+
+            {/* a host can look at the app from either side */}
+            {isHost && (
+                <TouchableOpacity
+                    onPress={() => switchTo(isHostMode ? "guest" : "host")}
+                    activeOpacity={0.8}
+                    accessibilityRole="button"
+                    className="flex-row items-center rounded-2xl border border-gray-300 bg-white"
+                    style={{ padding: rs(14), gap: rs(12) }}
+                >
+                    <Ionicons name="swap-horizontal-outline" size={rm(22)} color={COLORS.green} />
+                    <AppText variant="body" weight="semibold" style={{ flex: 1 }}>
+                        {isHostMode ? "Switch to traveling" : "Switch to hosting"}
+                    </AppText>
+                    <Ionicons name="chevron-forward" size={rm(18)} color={COLORS.muted} />
+                </TouchableOpacity>
+            )}
 
             {/* signed in: hosts add another listing, everyone else can become a host */}
             <TextButton
                 onPress={isHost ? handleAddListingPress : handleBecomeAHostButtonPress}
                 buttonName={isHost ? "Add a new listing" : "Become a host"}
                 textClassName="font-bold text-base"
-                className="mt-2 w-full border border-black rounded-xl py-4 items-center" />
+                className="w-full border border-black rounded-xl py-4 items-center" />
 
-            <TouchableOpacity onPress={signOut} className="mt-6 bg-black rounded-lg p-3 items-center">
+            {/* DEV ONLY (not in release builds): act like a host so the host side can be built before publishing works.
+                It only changes what the UI shows. Data and publishing still use the real account. */}
+            {__DEV__ && (
+                <View className="flex-row items-center rounded-2xl border border-dashed border-gray-400" style={{ padding: rs(14), gap: rs(12) }}>
+                    <View style={{ flex: 1 }}>
+                        <AppText variant="small" weight="semibold">Dev: act like a host</AppText>
+                        <AppText variant="caption" className="text-gray-500">UI only. Turn on, then tap "Switch to hosting".</AppText>
+                    </View>
+                    <Switch value={devForceHost} onValueChange={setDevForceHost} trackColor={{ true: COLORS.green }} />
+                </View>
+            )}
+
+            <TouchableOpacity onPress={signOut} className="bg-black rounded-lg p-3 items-center" style={{ marginTop: rv(8) }}>
                 <Text className="text-white font-bold">Sign out</Text>
             </TouchableOpacity>
-        </View>
+        </ScrollView>
     )
 }
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { ScrollView, TouchableOpacity, View } from "react-native";
-import { useRouter } from "expo-router";
+import { Href, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import AppText from "@/components/AppText";
@@ -10,9 +10,10 @@ import { supabase } from "@/lib/supabase";
 import { COLORS } from "@/styles/colors";
 import { rm, rs, rv } from "@/styles/responsive";
 
-// Where a host lands right after publishing. The listing is ALREADY saved (publish_listing in Supabase);
-// it goes live once the steps below are done. It shows what the ACCOUNT has verified, read from Supabase,
-// never from a flag the app can set. The phone code and the ID check are wired up in the next step.
+// The host's verification checklist. Reached two ways: right after publishing, and from the "Finish setting up"
+// card on the Profile tab. It shows what the ACCOUNT has verified, read from Supabase, never from a flag the app can set.
+// For now it only SHOWS the steps; the phone code, email confirmation and ID check are built later.
+// "I'll do this later" returns to the Profile tab, where the card stays until everything is done.
 export default function HostSetupPage() {
     const router = useRouter();
     const { session, isLoading } = useAuthContext();
@@ -40,9 +41,9 @@ export default function HostSetupPage() {
         <SafeAreaView className="flex-1 bg-white">
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: rs(20), paddingBottom: rv(32), gap: rv(14) }}>
                 <View>
-                    <AppText variant="heading">Your listing is saved!</AppText>
+                    <AppText variant="heading">Finish setting up</AppText>
                     <AppText variant="small" className="text-gray-500" style={{ marginTop: rv(4) }}>
-                        {doneCount} of {requirements.length} steps done. It goes live as soon as the rest are finished.
+                        {doneCount} of {requirements.length} steps done. Your listing goes live as soon as the rest are finished.
                     </AppText>
                 </View>
 
@@ -76,14 +77,17 @@ export default function HostSetupPage() {
                 </View>
 
                 <TouchableOpacity
-                    onPress={() => router.replace("/")}
+                    onPress={() => router.replace("/profile" as Href)}
                     activeOpacity={0.8}
                     accessibilityRole="button"
                     className="items-center justify-center rounded-xl border border-gray-300"
                     style={{ height: rm(48), marginTop: rv(6) }}
                 >
-                    <AppText variant="large" weight="semibold">Back to home</AppText>
+                    <AppText variant="large" weight="semibold">I'll do this later</AppText>
                 </TouchableOpacity>
+                <AppText variant="caption" className="text-gray-500 text-center">
+                    You can come back any time from the "Finish setting up" card on your Profile.
+                </AppText>
             </ScrollView>
         </SafeAreaView>
     );
