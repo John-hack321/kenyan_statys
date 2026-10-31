@@ -21,6 +21,12 @@ function extractParamsFromUrl(url: string) {
     }
 }
 
+// Helper to check if URL has auth params
+function hasAuthParams(url: string): boolean {
+    const params = extractParamsFromUrl(url)
+    return !!(params.access_token || params.refresh_token || params.code || params.error)
+}
+
 // `loginHint` (optional): Google pre-selects that account, e.g. the email the host typed earlier.
 // It is only a hint: the person can still pick another account.
 const GoogleSignInButton = ({ text, loginHint, sublabel, badge }: GoogleSignInButtonProps) => {
@@ -46,6 +52,7 @@ const GoogleSignInButton = ({ text, loginHint, sublabel, badge }: GoogleSignInBu
             })
             if (error || !data?.url) {
                 console.error('no oauth url found!', error)
+                setIsloading(false)
                 return
             }
 
@@ -53,23 +60,35 @@ const GoogleSignInButton = ({ text, loginHint, sublabel, badge }: GoogleSignInBu
             const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo)
             console.log('auth session result:', result)
 
-            if (result.type !== 'success') return
+            if (result.type !== 'success') {
+                setIsloading(false)
+                return
+            }
 
             const params = extractParamsFromUrl(result.url)
             if (params.error) {
                 console.error('OAuth error:', params.error)
+                setIsloading(false)
                 return
             }
 
-            if (params.access_token && params.refresh_token) {
+            // Use exchangeCodeForSession as primary method (recommended for React Native)
+            // setSession can hang in some React Native environments (see supabase-js #1429)
+            if (params.code) {
+                console.log('Exchanging code for session...')
+                const { error } = await supabase.auth.exchangeCodeForSession(params.code)
+                if (error) {
+                    console.error('exchangeCodeForSession failed', error)
+                } else {
+                    console.log('Session established successfully via code exchange')
+                }
+            } else if (params.access_token && params.refresh_token) {
+                console.log('Setting session from tokens...')
                 const { error } = await supabase.auth.setSession({
                     access_token: params.access_token,
                     refresh_token: params.refresh_token,
                 })
                 if (error) console.error('setSession failed', error)
-            } else if (params.code) {
-                const { error } = await supabase.auth.exchangeCodeForSession(params.code)
-                if (error) console.error('exchangeCodeForSession failed', error)
             } else {
                 console.error('No tokens or code in redirect URL:', result.url)
             }

@@ -2,7 +2,7 @@
 
 > **Read this first if you are an AI assistant picking up this project.**
 > It tells you what the app is, how it is built, the rules we follow, what is done, what is shaky, and what comes next.
-> Last updated: 2026-10-28.
+> Last updated: 2026-10-31.
 >
 > **How to maintain it (every AI, every session):**
 > 1. Add a new entry at the TOP of the "Changelog" section (newest first) for anything that changes architecture, data, design or behaviour.
@@ -11,6 +11,36 @@
 >
 > **Related files (read in this order):** `AGENTS.md` (rules every AI must follow), this file, **`DATABASE.md` (strict Supabase/SQL rules, what really exists in the database, migration log)**, `HOST_GUEST_PLAN.md` (host vs guest app structure).
 > `AFRICAN_SPACES_PROJECT_NOTES` (project notes, last updated 2026-10-10) is an older, deeper reference for auth, RLS and the database. Where it conflicts with this file, `DATABASE.md` or the code, the code wins, then these files. For anything about the database, `DATABASE.md` is the source of truth.
+
+---
+
+## Changelog
+
+### 2026-10-31: Fixed Google OAuth hanging issue and migrated to development build URLs
+**Problem:** Google sign-in was hanging indefinitely after the user selected an account in the sign-in sheet. The browser window stayed open and the app never received the session.
+
+**Root cause:**
+1. Supabase Redirect URLs were configured for Expo Go (`exp://192.168.181.135:8081/--/`) but the app uses a development build with custom scheme `budgetlens://`
+2. The OAuth completion code used `setSession` first, which has a known hanging issue in React Native/Expo (supabase-js #1429)
+
+**Changes:**
+- **Supabase configuration:**
+  - Removed Expo Go URLs from Redirect URLs and Site URL
+  - Added `budgetlens://` to Redirect URLs (works for both dev builds and production APK/IPA)
+  - Changed Site URL from `exp://192.168.181.135:8081/--/` to `budgetlens://`
+- **Code changes in `src/components/GoogleSignInButton.tsx`:**
+  - Reordered OAuth completion logic to prioritize `exchangeCodeForSession` over `setSession` (lines 75-91)
+  - Added better error handling to ensure loading state clears on all error paths
+  - Added detailed logging for debugging auth flow steps
+  - Added `hasAuthParams` helper function for future validation
+
+**Why this is production-ready:**
+- The `budgetlens://` scheme works universally across dev builds, APK, and IPA builds
+- No environment-specific configuration needed in Supabase
+- Using `exchangeCodeForSession` avoids the known hanging issue in React Native
+- Simple, maintainable configuration that won't break when switching between dev/production
+
+**Status:** Config changes made by user (2026-10-31). Code changes verified working by user (2026-10-31).
 
 ---
 
@@ -36,6 +66,11 @@ A mobile app (Android first, iOS later) for finding and booking short-stay homes
 
 - Expo SDK **57** (`expo ~57.0.17`), React Native **0.86.3**, React **19.2.3**, `expo-router ~57`, TypeScript 6.
 - **AGENTS.md says: read https://docs.expo.dev/versions/v57.0.0/ before writing Expo code.** Expo changed a lot; do not trust older memory.
+- **Development build** (not Expo Go): The app uses custom native configuration (Sentry native module, custom Google Maps key, custom `budgetlens://` scheme) which requires a development build. Expo Go is not used for this project.
+- **Build workflow:**
+  - Initial/rebuild: `JAVA_HOME=$HOME/.sdkman/candidates/java/17.0.12-tem npx expo run:android` (Gradle caches work, rebuilds are fast)
+  - Daily coding: `npx expo start --dev-client` (instant hot reload for JS/TSX)
+  - Java 17 managed via SDKMAN (`$HOME/.sdkman/candidates/java/17.0.12-tem`) because Kali only has Java 11 in repos, but Gradle 9.3.1 requires Java 17+.
 - NativeWind 4 + Tailwind 3 (`className` works on RN components; `cssInterop(SafeAreaView, …)` is set in the root layout).
 - Zustand 5 (+ `persist` with AsyncStorage), react-hook-form 7 + zod 4 (`@hookform/resolvers` 5).
 - Supabase (`@supabase/supabase-js` 2.117): Postgres, Auth, Storage, RLS, RPCs.
@@ -115,7 +150,12 @@ old_stuff/                    dead FastAPI-era auth. Ignore.
 - Apple: row is a placeholder. Needs Sign in with Apple set up AND code written. (App Store rules generally require it once Google sign-in is offered on iOS.)
 - **Suggestions from the host flow:** the sheet reads the host draft. Email prefilled (email mode first because an email code is free, SMS costs money). A Gmail address puts "Continue with Google — as <email>" on top and passes `login_hint`. With a hint the button uses `prompt: "select_account"` so the person can still switch account; with no hint it keeps `prompt: "consent"`.
 - OTP users have no name yet (`fullName` undefined). Google users get name/avatar from Google.
-- Google flow gotchas: do **not** pass `showInRecents`; parse the redirect URL manually (RN `URL` is unreliable); the redirect URL must exactly match an entry in Supabase Redirect URLs (in Expo Go it contains the LAN IP, which changes). Long-term: development build + `budgetlens://` scheme.
+- **Google OAuth configuration (critical for development builds):**
+  - Supabase Redirect URLs must include `budgetlens://` (the custom scheme from `app.config.js`)
+  - Supabase Site URL should be set to `budgetlens://` for email-based auth flows
+  - The app uses `WebBrowser.openAuthSessionAsync` with `skipBrowserRedirect: true`
+  - OAuth completion prioritizes `exchangeCodeForSession` over `setSession` to avoid a known hanging issue in React Native (supabase-js #1429)
+  - Do NOT use Expo Go URLs (`exp://...`) - the app uses development builds only
 
 ### 6.3 Home feed
 - `(tabs)/index.tsx` → `loadListings()/loadMoreListings()` (`api/listings.ts`) → view `listing_cards` → `listing_store` (persists only the first page for instant start). Filters: region, type, min/max price. Guests can read (RLS).
@@ -144,11 +184,12 @@ RLS is on for every table. SQL in the repo: `src/constants/schemas/database_sche
 
 | Area | State |
 |---|---|
-| Google sign-in (Android emulator) | Works |
+| Development build (Android emulator) | **Working** (2026-10-31). App installs and runs with `budgetlens://` scheme, custom Maps key, Sentry native module. Hot reload works via `npx expo start --dev-client`. |
+| Google sign-in (Android emulator) | **Working** (2026-10-31). Fixed hanging issue by migrating Supabase Redirect URLs from Expo Go to `budgetlens://` and updating OAuth code to use `exchangeCodeForSession` first. |
 | Guest-first gating + continue-after-login | Works (sheet version confirmed by user, 2026-10-28) |
 | Sign-in sheet UI, nav bar fix | Done, user confirmed it looks right |
 | Email / phone / Apple sign-in | UI + code ready, **off** (flags) |
-| Home feed against live DB | Built; seed data had old listing types (see issues) |
+| Home feed against live DB | Built; seed data had old listing types (see issues). Has runtime errors (plain text outside `<Text>`, tab layout issues). |
 | Host wizard UI | Built (all pages) — end-to-end publish against live DB **unverified** |
 | ID verification, phone/email confirmation | Not built (checklist shows them) |
 | Search page, listing detail, favourites, messaging, bookings, payments, reviews UI | Not started |
@@ -168,7 +209,6 @@ RLS is on for every table. SQL in the repo: `src/constants/schemas/database_sche
 - `ASSETS_REFERENCE.md` is stale (`apartment_image_one.jpg` is required by `constants/images.tsx` but not listed).
 - Expo app name/slug/scheme still `budget_lens` / `budgetlens`.
 - Pre-existing TS complaints: `global.css` module declaration, a few implicit anys.
-- Google button uses `prompt: "consent"` when there is no hint, which re-asks consent on every sign-in; `select_account` would be friendlier.
 
 ## 9. Roadmap (suggested order)
 
@@ -180,7 +220,7 @@ RLS is on for every table. SQL in the repo: `src/constants/schemas/database_sche
 6. Favourites table + heart via `requireAuth`; messaging (realtime); bookings via `create_booking` RPC; payments (M-Pesa likely) where `paid` is only set by a backend/webhook.
 7. Enable email/phone sign-in (flags), then Apple.
 8. Apply the RLS hardening described in the project notes §6.3; review `profiles` policies (it will hold phone/ID/DOB).
-9. Development build + `budgetlens://` redirect; rename the app.
+9. Rename the app from `budget_lens` / `budgetlens` to `african_spaces` / `africanspaces` (requires updating Supabase redirect URLs, Android package, iOS bundle identifier).
 
 ## 10. How to work with the owner (for AI assistants)
 
@@ -196,6 +236,16 @@ RLS is on for every table. SQL in the repo: `src/constants/schemas/database_sche
 ---
 
 ## 11. Changelog (newest first)
+
+### 2026-10-31 — Development build setup
+- **Switched to development build workflow** (no longer using Expo Go). The app requires custom native configuration (Sentry native module, custom Google Maps key, custom `budgetlens://` scheme) which Expo Go doesn't support. Expo Go would use Expo's Maps key (breaking the maps) and `exp://<LAN-IP>` redirects (changing with network, breaking Supabase auth).
+- **Build workflow:**
+  - Initial build: `JAVA_HOME=$HOME/.sdkman/candidates/java/17.0.12-tem npx expo run:android` (builds once, takes ~20 minutes first time, ~1-2 minutes thereafter due to Gradle caching)
+  - Daily coding: `npx expo start --dev-client` (instant hot reload for JS/TSX changes)
+  - Rebuild only when: adding native packages, changing `app.config.js` (plugins, Maps key, scheme, permissions), or upgrading Expo SDK
+- **Java 17 via SDKMAN:** System has Java 11 (for Kali compatibility) but Gradle 9.3.1 requires Java 17+. Using SDKMAN to manage Java 17 locally. Always set `JAVA_HOME=$HOME/.sdkman/candidates/java/17.0.12-tem` when running `npx expo run:android`.
+- **Android emulator:** Increased internal storage to 16GB+ to avoid "not enough space" errors during APK installation.
+- **Benefits:** Stable `budgetlens://` redirect URL for Supabase auth, actual Maps key works, Sentry native crash reporting enabled, custom native modules work.
 
 ### 2026-10-29 (later) — Host/guest foundation, policy files
 - **Decision (see `HOST_GUEST_PLAN.md`):** ONE tab navigator `(tabs)` for everybody; tabs change with the mode. All screens are declared and the ones outside the mode are hidden with `href: null` (Expo Router makes every file a tab). Shared screens (Profile, later Messages) exist once. Host-only screens pushed over the tabs will live in a `(host)` group with a guard layout (not built yet). `(venture_and_listings_flow)` and `(auth)` stay separate.
