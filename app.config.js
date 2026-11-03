@@ -75,6 +75,13 @@ export default {
           }
         }
       }
+    ],
+    [
+      "@didit-protocol/sdk-react-native",
+      {
+        iosVariant: "core",
+        androidVariant: "core"
+      }
     ]
   ],
   experiments: {

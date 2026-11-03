@@ -32,6 +32,7 @@ export default function HostSetupPage() {
 
     if (isLoading) return null;
 
+    // NOTES FOR AI : we need to make this adoptive so that is shows what needs to be verified if email it will show emal and if 
     const requirements = getHostRequirements(session?.user ?? null, { contactEmail: contact?.email ?? undefined })
         .filter((r) => r.key !== "publish")
         .map((r) => (r.key === "phone" && !r.done && contact?.phone ? { ...r, detail: `We'll text a code to ${contact.phone}.` } : r));

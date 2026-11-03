@@ -3,6 +3,7 @@
   "main": "expo-router/entry",
   "version": "1.0.0",
   "dependencies": {
+    "@didit-protocol/sdk-react-native": "^4.11.0",
     "@expo/ui": "~57.0.14",
     "@expo/vector-icons": "^15.1.1",
     "@hookform/resolvers": "^5.9.1",
