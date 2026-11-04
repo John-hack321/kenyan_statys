@@ -21,7 +21,7 @@ interface FeaturedCardProps {
         <TouchableOpacity
             onPress={onPress}
             className="flex flex-col items-start w-60 h-80 relative"
-            style={{width: rm(180) , height: rm(240) }}
+            style={{width: rm(200) , height: rm(240) }}
         >
             <Image source={{ uri: item.coverUrl || undefined }} className="size-full rounded-2xl" />
 
@@ -40,18 +40,21 @@ interface FeaturedCardProps {
             <View className="flex flex-col items-start absolute bottom-5 inset-x-5">
                 <Text
                 className="text-xl font-rubik-extrabold text-white"
-                numberOfLines={2}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+                style={{minWidth: rm(140)}}
+                allowFontScaling={true}
                 >
                     {item.type}
                 </Text>
 
                 {/* address */}
-                <Text className="font-rubik text-white" numberOfLines={1}>
+                <Text className="font-rubik text-white" numberOfLines={1} allowFontScaling={true}>
                     {item.area}
                 </Text>
 
                 <View className="flex flex-row items-center justify-between w-full">
-                    <Text className="text-xl font-rubik-extrabold text-white">
+                    <Text className="text-xl font-rubik-extrabold text-white" allowFontScaling={true}>
                         KES {item.price}
                     </Text>
                 <Ionicons name="heart" size={rs(20)} color="#888" />

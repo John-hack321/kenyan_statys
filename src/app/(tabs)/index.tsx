@@ -83,10 +83,10 @@ export default function Home() {
 
             <View className="">
                 <View className="flex flex-row items-center justify-between">
-                    <Text className="text-xl font-rubik-bold text-black-300">
+                    <Text className="text-xl font-rubik-bold text-black-300 flex-1" numberOfLines={1}>
                         Our Recommendation
                     </Text>
-                    <TouchableOpacity>
+                    <TouchableOpacity className="ml-2">
                         <Text className="text-base font-rubik-bold text-dark-green-ascents">
                             See all
                         </Text>

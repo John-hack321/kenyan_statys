@@ -26,8 +26,10 @@ const Search = () => {
                     value={search}
                     onChangeText={handleSearch}
                     placeholder="search for rooms and places "
+                    placeholderTextColor="#888"
                     className="text-sm text-black-300 ml-2 flex-1"
                     style={{fontSize: rv(12), lineHeight: rv(20)}}
+                    allowFontScaling={true}
                 />
             </View>
 

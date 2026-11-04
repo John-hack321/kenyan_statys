@@ -15,7 +15,13 @@ export default {
     config: {
       googleMapsApiKey: GOOGLE_MAPS_API_KEY
     },
-    bundleIdentifier: "com.johnhack321.africanspaces"
+    bundleIdentifier: "com.johnhack321.africanspaces",
+    infoPlist: {
+      NSCameraUsageDescription: "Used to verify your identity.",
+      NSMicrophoneUsageDescription: "Used to verify your identity.",
+      NSPhotoLibraryUsageDescription: "Used to upload your ID.",
+      NSLocationWhenInUseUsageDescription: "Used to help prevent fraud.",
+    }
   },
   android: {
     package: "com.johnhack321.africanspaces",
@@ -80,7 +86,9 @@ export default {
       "@didit-protocol/sdk-react-native",
       {
         iosVariant: "core",
-        androidVariant: "core"
+        androidVariant: "core",
+        iosNfcEnabled: false,
+        androidNfcEnabled: false
       }
     ]
   ],
@@ -88,6 +96,9 @@ export default {
     typedRoutes: true
   },
   extra: {
-    backendBaseUrl: "http://10.0.2.2:8000"
+    backendBaseUrl: "http://10.0.2.2:8000",
+    eas: {
+      projectId: "b2df6c23-e30f-48f5-9933-2d4472866868"
+    }
   }
 };

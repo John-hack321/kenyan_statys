@@ -16,6 +16,48 @@
 
 ## Changelog
 
+### 2026-11-04: Physical device testing setup and font scaling fixes
+**Problem:** Text rendering issues on physical Android device (text clipping, truncated labels, white placeholder text on light background). These issues didn't appear on the emulator.
+
+**Root cause:**
+1. Physical device had system font scaling enabled (accessibility setting), while emulator was at default 100%
+2. React Native's `<Text>` component respects OS-level font scaling by default
+3. Tight container widths and heights couldn't accommodate scaled-up text
+4. Search placeholder had no explicit color, defaulting to white on light background
+
+**Changes:**
+- **EAS build setup for physical device testing:**
+  - Created `eas.json` with development build profile
+  - Added EAS project ID to `app.config.js` (extra.eas.projectId)
+  - Added iOS camera/microphone/photo/location permission descriptions in `infoPlist`
+  - Disabled NFC in Didit plugin (iosNfcEnabled: false, androidNfcEnabled: false)
+  - Installed `expo-dev-client` via EAS CLI
+- **Font scaling mitigation (Option 2 - balanced approach):**
+  - Added global `maxFontSizeMultiplier = 1.2` in `src/app/_layout.tsx` for all Text and TextInput components
+  - Caps font scaling at 120% to support accessibility while preventing layout breakage
+- **UI component fixes:**
+  - Search bar: Added `placeholderTextColor="#888"` to make placeholder visible
+  - "Our Recommendation" header: Added `flex-1` and `numberOfLines={1}` to prevent clipping
+  - Featured cards: Increased width from `rm(180)` to `rm(200)` for more text space
+  - Property type text: Changed to single line with ellipsis (`ellipsizeMode="tail"`) and added minimum width
+  - Added explicit `allowFontScaling={true}` to ensure components respect the 1.2x cap
+
+**Why this approach:**
+- Option 2 (cap at 1.2x) balances accessibility support with UI stability
+- Still allows users to increase text 20% for accessibility needs
+- Prevents extreme scaling (130%+) from breaking layouts
+- No need for full layout overhaul while maintaining good UX
+
+**Build workflow update:**
+- Physical device testing now uses EAS cloud builds: `eas build --profile development --platform android`
+- One-time build installs dev build APK on phone
+- Subsequent changes hot reload via QR code scanning with `npx expo start --dev-client`
+- Android Studio emulator workflow unchanged: `npx expo run:android` (initial) + `npx expo start --dev-client` (daily)
+
+**Status:** EAS build configured, changes hot-reloaded to physical device. Text rendering issues resolved.
+
+---
+
 ### 2026-10-31: Fixed Google OAuth hanging issue and migrated to development build URLs
 **Problem:** Google sign-in was hanging indefinitely after the user selected an account in the sign-in sheet. The browser window stayed open and the app never received the session.
 
@@ -201,6 +243,15 @@ RLS is on for every table. SQL in the repo: `src/constants/schemas/database_sche
 - `src/api/auth.ts` (uses `localStorage`) and `old_stuff/authContext.tsx` are dead.
 - `src/components/prep.tsx` is a scratch file with top-level JSX and missing imports; it is not imported but breaks type-checking. Delete it.
 - `lib/aut-actions.ts` is misspelled (kept so imports still work). `signup()` there takes no `id_number` any more; `sign-up.tsx` still passes one.
+
+## 9. Recent improvements (2026-11-04)
+
+**Physical device testing setup:**
+- EAS build configured (`eas.json`) for cloud-based development builds
+- Added iOS camera/microphone/photo/location permission descriptions for camera features
+- Disabled NFC in Didit plugin to simplify verification flow
+- Font scaling capped at 1.2x globally to balance accessibility with UI stability
+- Fixed text clipping issues on physical device (search placeholder, card widths, header truncation)
 - `AppleSignInButton.tsx` and the old `customButton.tsx` / `customInput.tsx` are mostly unused; `customButton` has implicit-any props.
 - **Listing types mismatch:** the wizard saves `room | hotel | house | apartment | guest_house`, the seed data and `listing_store` comments use `bedsitter | studio | one_bedroom …`. `ListingCard` prints the raw `type` and shows `$` instead of KES. Use `describeListing` / `DB_TYPE_LABELS` (`constants/listingTypes.ts`) and fix the price label.
 - `tailwind.config.js` is out of sync with `styles/colors.ts`: it lacks `warning`, `danger`, `brand-line`, and `brand-soft` there is `#0A7A4D` while `COLORS.greenSoft` is `#EEF5F0` (code uses `bg-brand-soft` and `bg-warning-soft`). Check how those render. (unverified)
