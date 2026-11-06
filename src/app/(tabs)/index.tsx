@@ -43,7 +43,7 @@ export default function Home() {
             <ActivityIndicator size="large" className="text-primary-300 mt-5" />
         ) : (
             <View>
-                No listings found {/* find a better way to do this later on .  */}
+                <Text className="text-center text-gray-500">No listings found</Text>
             </View>
         )
     }
