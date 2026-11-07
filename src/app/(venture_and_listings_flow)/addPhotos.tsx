@@ -131,7 +131,6 @@ const AddPhotosPage = () => {
                         </View>
                     )}
                 </View>
-
                 <View style={{ paddingHorizontal: sidePadding }}>
                     {photos.length > 0 && (
                         <Sortable.Grid

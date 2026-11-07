@@ -3,7 +3,7 @@
 > **Every AI assistant must read this before writing or suggesting ANY SQL, RLS policy, RPC, storage rule or Supabase call.**
 > The owner is new to Supabase and raw SQL (comes from ORMs like SQLAlchemy), and this is where security lives.
 > Be strict. If a rule here conflicts with being fast, the rule wins.
-> Last updated: 2026-10-29.
+> Last updated: 2026-11-07 (file renamed from DATABASE.dm to DATABASE.md).
 
 ---
 
@@ -35,7 +35,7 @@ Never write "the table has X" or "this runs" without one of these labels.
 9. **Never trust a value from the app** for money, status, verification, ownership, or location precision. Recompute or reject on the server.
 10. **Views use `security_invoker = true`**, otherwise they bypass RLS.
 11. **Storage:** one folder per user (`<user-id>/...`) with policies on `storage.objects` that check `(storage.foldername(name))[1] = (select auth.uid())::text`. Private documents (ID photos, later) go in a PRIVATE bucket.
-12. **After every DB change** give a verification query with the expected result, then update section 4 (registry), section 6 (migration log) and `BUILD_LOG.md` in the same session.
+12. **After every DB change** give a verification query with the expected result, then update section 4 (registry), section 6 (migration log) and `buildLog.md` in the same session.
 13. **Test policies by simulating roles** (`set local role anon` / `authenticated` with JWT claims; see `AFRICAN_SPACES_PROJECT_NOTES` section 6.5). The SQL editor bypasses RLS, so "it works in the editor" proves nothing.
 
 ### MUST NOT (never)
@@ -156,5 +156,5 @@ Rule: a migration is "RUN" only after the owner says so AND a verification query
 - [ ] Sensitive data is in a private table.
 - [ ] Anything a user must not set is protected by a column grant or an RPC.
 - [ ] I gave a verification query and the expected result.
-- [ ] I updated sections 4 and 6 here and the changelog in `BUILD_LOG.md`.
+- [ ] I updated sections 4 and 6 here and the changelog in `buildLog.md`.
 - [ ] I said plainly what I did NOT verify.

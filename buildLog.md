@@ -2,14 +2,14 @@
 
 > **Read this first if you are an AI assistant picking up this project.**
 > It tells you what the app is, how it is built, the rules we follow, what is done, what is shaky, and what comes next.
-> Last updated: 2026-11-05.
+> Last updated: 2026-11-07.
 >
 > **How to maintain it (every AI, every session):**
 > 1. Add a new entry at the TOP of the "Changelog" section (newest first) for anything that changes architecture, data, design or behaviour.
 > 2. If a change makes another section wrong (architecture, conventions, known issues), fix that section too. Do not only append.
 > 3. Mark anything you did not verify as **(unverified)**. Never state that something runs or exists in Supabase unless the user confirmed it.
 >
-> **Related files (read in this order):** `AGENTS.md` (rules every AI must follow), this file, **`DATABASE.md` (strict Supabase/SQL rules, what really exists in the database, migration log)**, `HOST_GUEST_PLAN.md` (host vs guest app structure).
+> **Related files (read in this order):** `AGENTS.md` (rules every AI must follow), this file, **`DESIGN.md` (tokens, component inventory, UI patterns, hard accessibility floors, known design deviations; read before any UI work)**, **`DATABASE.md` (strict Supabase/SQL rules, what really exists in the database, migration log; read before any database work)**, `HOST_GUEST_PLAN.md` (host vs guest app structure). Design skills live in `.claude/skills/` (`african-spaces-design`, `african-spaces-design-review`, shared notes in `_shared/references/`).
 > `AFRICAN_SPACES_PROJECT_NOTES` (project notes, last updated 2026-10-10) is an older, deeper reference for auth, RLS and the database. Where it conflicts with this file, `DATABASE.md` or the code, the code wins, then these files. For anything about the database, `DATABASE.md` is the source of truth.
 >
 > **Several AIs work on this repo** (Claude in the chat/project, and a local coding AI, Devin/Windsurf, in the editor). Each one only sees its own changes, so log what you did here, and say which AI did it.
@@ -17,6 +17,60 @@
 ---
 
 ## Changelog
+
+### 2026-11-07: Design skills references updated (platform-rules, screen-patterns)
+**Docs only. No app code, no database change. NOT RUN: code snippets unverified.**
+
+**Why:** the owner clarified the "reduce motion" guidance and added a scroll-linked collapsible header pattern (WhatsApp-style profile photo) to the design skills references.
+
+**Changed:**
+- `.claude/skills/_shared/references/platform-rules.md`: expanded the "reduce motion" section (section 7) to clarify that it does not mean "no animation" - keep spinners, progress bars, simple fades, and motion that follows user input. Skip only decorative motion (confetti, staggered entrances) and soften big automatic movement (parallax, zoom, bounce). Added guidance for scroll-linked effects (collapsing headers, profile photo shrinking) with Reanimated scroll handlers, clamped interpolation, and simple fallbacks for reduce-motion users.
+- `.claude/skills/_shared/references/screen-patterns.md`: added pattern 11 "Collapsing header (WhatsApp-style profile photo)" with a Reanimated code snippet showing avatar transformation (centre to left gutter, scale, translate) on scroll. Rules: animate only transform/opacity, clamp the range, keep name visible, ensure header targets stay 44 dp+, add accessibilityLabel, use `useReducedMotion()` for a snap fallback. (UNVERIFIED: the numbers and API names need tuning on device and checking against Reanimated 4.5 docs.)
+
+**Status:** All the original 2026-11-07 design system work (DESIGN.md, skill files, HOST_GUEST_PLAN.md creation, DATABASE.dm rename) was applied earlier in this session. This entry only covers the additional refinements to the references.
+
+---
+
+### 2026-11-07: Design system file and design skills (Claude, in the chat)
+**Docs and skills only. No app code, no database change. NOT RUN: nothing here can be run; the skills have not been tried yet.**
+
+**Why:** the owner wanted Claude (and the local coding AI) to design to an industry standard without drifting from what the app already looks like. Two public projects were used for inspiration, not copied: `draftbit/mobile-taste-skill` (persistent design file, shared references, build + review skills, a "tells" catalogue) and `ehmo/platform-design-skills` (Apple HIG / Material 3 / WCAG rules). Their React Native Reusables and `Pressable` defaults were deliberately NOT adopted, because the repo already has its own components and `AGENTS.md` forbids a second pattern.
+
+**Added (all NEW files)**
+- `DESIGN.md`: App Read and the three dials (Expression 4, Motion 5, Density 4), tokens taken from `styles/colors.ts` and `styles/typography.ts`, component inventory, 10 patterns, 10 hard floors, Kenya-specific context, copy rules, platform posture, decisions table, 12 known deviations found by reading the code, and a last-review table.
+- `.claude/skills/african-spaces-design/SKILL.md`: build skill (read `DESIGN.md`, write an App Read, reuse components, hard floors, self-check, deliver files, update the logs).
+- `.claude/skills/african-spaces-design-review/SKILL.md`: audit skill (rated P0 to P3 findings, Design Score /100, AI-slop score A to D, report only; fix mode is opt-in, one component at a time).
+- `.claude/skills/_shared/references/`: `platform-rules.md` (HIG / Material 3 / WCAG 2.2 mapped to our components), `screen-patterns.md` (canonical snippets using our components), `tells.md` (24 generic-AI-UI tells + a runnable grep checklist), `review-rubric.md` (passes, severity, finding format, scoring).
+
+**Changed:** `AGENTS.md` (read order now includes `DESIGN.md`; new design MUST / MUST NOT rules; "skills are advisory, the project wins"; corrected file names) and `CLAUDE.md` (points to `DESIGN.md`, the skills and `buildLog.md`).
+
+**Decisions (proposed by Claude, owner to confirm; also in `DESIGN.md` section 7)**
+- Keep `TouchableOpacity` for new buttons (no mixing in `Pressable`), for consistency.
+- Display currency as **KSh** (`formatKes()`); `ListingCard` still shows `$` and `KES` (known deviation).
+- Light-only UI for now.
+- Motion dial 5: spinners, progress, fades and scroll-linked effects (for example a collapsing profile header) are welcome; decorative motion is skipped for users with reduce-motion on. (Set by the owner.)
+
+**Found while reading the code (reported, NOT fixed; list in `DESIGN.md` section 9)**
+- 36 dp buttons with no `hitSlop` (`SaveAndExitButton`, `DiscardButton`); `text-gray-400` used for meaningful text; Confetti and entering animations ignore reduced motion; many inline hex values; Tailwind and `COLORS` palettes differ; `ListingCard` has no image placeholder, wrong currency, raw type and no accessibility; home search bar is not a button and has no label; home feed shows only a spinner and never shows the store's error; `userInterfaceStyle: "automatic"` with a light-only UI (effect on dark-mode phones unverified); font scale capped at 1.2 (below what accessibility guidance expects).
+
+**Not verified:** none of the skills has been loaded in Claude Code or Devin yet; `useReducedMotion` / `accessibilityRole="search"` snippets need a check against Reanimated 4.5 and RN 0.86 types; no design review has been run (baseline table in `DESIGN.md` section 10 is empty).
+
+**Follow-ups:** install and try the build skill on the next screen (home header with search button + type chips); run the review skill on the host wizard, then the feed; decide the font-scale cap; fix the verified P1s (touch targets, contrast) when those files are next touched.
+
+---
+
+### 2026-11-07: Fixed Google Maps API key configuration for Android in EAS builds
+**Problem:** Google Maps in the Android development build (EAS cloud build) threw "API key not found" error at runtime. The environment variable `EXPO_PUBLIC_GOOGLE_MAPS_API_KEY` was set in EAS for the development environment, but the key was not being injected into AndroidManifest.xml during the build.
+
+**Root cause:** The `react-native-maps` plugin configuration in `app.config.js` was using `apiKey` (incorrect for Expo SDK 57) instead of the platform-specific `androidGoogleMapsApiKey`.
+
+**Changes:**
+- Updated `app.config.js` line 65-70: changed the `react-native-maps` plugin config from `{ apiKey: GOOGLE_MAPS_API_KEY }` to `{ androidGoogleMapsApiKey: GOOGLE_MAPS_API_KEY }`
+- This matches the Expo SDK 57 / react-native-maps documentation for Android-specific API key configuration
+
+**Status:** Tested on physical Android device via EAS development build. Google Maps now renders correctly (VERIFIED by user, 2026-11-07).
+
+---
 
 ### 2026-11-05: Host verification with Didit (KYC), Supabase Edge Functions, verification flow screens
 **Done in the Claude chat. Written, deployed and partly checked, NOT yet run end to end** (the first trial on a phone, from an EAS dev build, was starting when this was written).
@@ -154,6 +208,9 @@ A mobile app (Android first, iOS later) for finding and booking short-stay homes
 ## 4. Project layout and path aliases
 
 ```
+AGENTS.md / CLAUDE.md      rules for every AI (read first)
+DESIGN.md                  design source of truth: tokens, components, patterns, hard floors, known deviations
+.claude/skills/            african-spaces-design (build), african-spaces-design-review (audit), _shared/references/
 app.config.js              Expo config (app.json is git-ignored; config lives here). Maps key from .env
 global.css / tailwind.config.js / babel.config.js / metro.config.js / eas.json
 providers/auth-provider.tsx   Supabase session -> React context + Zustand user cache
@@ -216,6 +273,12 @@ old_stuff/                    dead FastAPI-era auth. Ignore.
 - A function that must be called by an outside service (webhook) is deployed with `--no-verify-jwt` and protected by a signature check. Functions called by the app check the login token themselves (`admin.auth.getUser(token)`).
 - Functions use the service role to write; the app can only read its own `host_identity` status (RLS + column grants).
 - Webhooks can arrive twice or out of order: every update must be safe to repeat and must not let an old session overwrite a newer one.
+
+**Design (new, 2026-11-07)**
+- `DESIGN.md` is the single place for tokens, the component inventory, patterns and hard floors. Read it before any UI work; update it when you add a pattern, fix a deviation or make a design decision.
+- Hard floors: 44 to 48 dp targets, 4.5:1 text contrast, never colour alone, roles/labels/states on every interactive element, loading/empty/error/success states, reduced motion, keyboard-safe forms, safe areas, survives font scale 1.2.
+- Reuse before you build: check `DESIGN.md` section 3. No new colour, radius, font size, button, modal or card component without approval and a log entry.
+- Third-party design skills are advisory; where they conflict with the code or `DESIGN.md`, the project wins.
 
 **Style of code the owner likes**
 - Plain-language comments explaining *why*. Small components that own no state (state comes in as props). Short helpers instead of clever abstractions.
@@ -293,6 +356,7 @@ App reads host_identity.status (own row only) and shows the state
 | Host verification (Didit): functions, screens, webhook, console setup | **Built and deployed, first end-to-end trial pending (NOT RUN)** |
 | Contact confirmation (phone/email) | Page built; **off** until an SMS provider / email template exists |
 | Registry (IPRS) check, guest verification, AML | Not built (decided: later) |
+| Design system file + design skills (`DESIGN.md`, `.claude/skills/`) | Written 2026-11-07, **not yet tried** in Claude Code / Devin; no design review run yet |
 | Search page, listing detail, favourites, messaging, bookings, payments, reviews UI | Not started |
 | SMS provider for phone confirmation/sign-in | Not set up (**blocks hosts going live**) |
 
@@ -314,13 +378,14 @@ App reads host_identity.status (own row only) and shows the state
 - `DATABASE.md` still says migration 05 is NOT RUN and `host_identity` is missing; update it from the 2026-11-05 verified results.
 - Function A only has a 30 s cooldown per host; add a daily cap before launch (each session may cost money).
 - Verification pages are not wrapped in an "is this a host?" guard (the database still protects everything).
+- **Design deviations** (12 items, from reading the code on 2026-11-07, not run on a device) are tracked in `DESIGN.md` section 9: small touch targets, low-contrast text, no reduced-motion handling, inline hex, palette mismatch, `ListingCard` problems, home search bar and states, light-only UI vs `userInterfaceStyle: "automatic"`, wizard back behaviour, font-scale cap.
 
 ## 9. Roadmap (suggested order)
 
 1. **Finish and verify host verification:** first end-to-end trial (sandbox), fix anything in the UNVERIFIED list, then go live with a live Didit endpoint/keys.
 2. **SMS provider** (Twilio or Africa's Talking) → flip `AUTH_METHODS.phone` → phone confirmation and phone sign-in; then email codes (template with `{{ .Token }}`).
 3. Registry (IPRS) check at a host's first payout or on a risk flag (store only last 4 + keyed hash, never the full number).
-4. Home header: search bar as a button + type chips (`applyListingFilters` already exists); search page v1 then v2 (places API + distance).
+4. Home header: search bar as a button + type chips (`applyListingFilters` already exists); search page v1 then v2 (places API + distance). Build it with the `african-spaces-design` skill, then run the `african-spaces-design-review` skill on the host wizard and the feed and record the baseline in `DESIGN.md` section 10. Fix `ListingCard` (placeholder, KSh, accessibility) as part of this step.
 5. Listing detail (photos in `listing_media.position` order, amenities, map, reviews, availability).
 6. Favourites table + heart via `requireAuth`; messaging (realtime); bookings via `create_booking` RPC; payments (M-Pesa likely) with the platform holding the guest's payment until after check-in and `paid` set only by a backend/webhook; payouts only to an account matching the verified name. Check licensing implications of holding funds (use a licensed provider's escrow/split).
 7. Guest verification at first booking (reuse `components/verification/`).
@@ -338,6 +403,8 @@ App reads host_identity.status (own row only) and shows the state
 - Cover-the-screen modals: always `ModalSheet`.
 - Keep responsive sizing (`rs/rv/rm`), `AppText`, `COLORS`, and the field components. Do not introduce a second styling approach.
 - When a change touches architecture, data or design, update this file in the same session, and say which AI made the change.
+- For any UI task: read `DESIGN.md`, state the screen's one primary action and its pattern before coding, reuse existing components, meet the hard floors, and say what you did not check (device, small screen, font scale, screen reader).
+- Do not mass-restyle old screens. Fix design deviations only in files you are already changing, or in a pass the owner asked for; list the rest.
 
 ---
 

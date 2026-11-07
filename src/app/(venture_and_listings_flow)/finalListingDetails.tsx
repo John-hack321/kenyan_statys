@@ -18,7 +18,7 @@ import {
 } from "@/constants/schemas/listing";
 import { PlaceResult, distanceKm, fetchRegions } from "@/lib/places";
 import { normalizePlaceName } from "@/lib/text";
-import { rm, rs, rv } from "@/styles/responsive";
+import { rm, rs , rv } from "@/styles/responsive";
 
 const GREEN = "#064D30";
 const PIN_FAR_KM = 25; // warn (never block) when the pin is further than this from the chosen place

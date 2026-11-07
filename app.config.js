@@ -1,6 +1,6 @@
 import 'dotenv/config';
 
-const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY || '';
+const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '';
 
 export default {
   name: "budget_lens",
@@ -65,7 +65,7 @@ export default {
     [
       "react-native-maps",
       {
-        apiKey: GOOGLE_MAPS_API_KEY
+        androidGoogleMapsApiKey: GOOGLE_MAPS_API_KEY
       }
     ],
     [
