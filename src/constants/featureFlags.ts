@@ -16,6 +16,6 @@ export const GAZETTEER_ENABLED = true;
 export const AUTH_METHODS = {
     google: true,
     email: false,
-    phone: false,
+    phone: true,
     apple: false,
 } as const;
