@@ -2,7 +2,7 @@
 
 > **Read this first if you are an AI assistant picking up this project.**
 > It tells you what the app is, how it is built, the rules we follow, what is done, what is shaky, and what comes next.
-> Last updated: 2026-11-07.
+> Last updated: 2026-11-07 (text and sizing reconciliation).
 >
 > **How to maintain it (every AI, every session):**
 > 1. Add a new entry at the TOP of the "Changelog" section (newest first) for anything that changes architecture, data, design or behaviour.
@@ -17,6 +17,60 @@
 ---
 
 ## Changelog
+
+### 2026-11-07 (later): Feed cards simplified, heart kept, "per night"
+**Claude (chat), after owner feedback on emulator screenshots. NOT RUN on a device.** `listing_cards.tsx` rewritten: photo (square) then two lines only: "Apartment in Kasarani" and "KSh 2,100 per night · ★ 4.5" (price + rating on one muted line). The host's listing title is no longer on the card. The heart is back on the photo for both cards (it had been hidden only because favourites do not exist; owner wants it for the future wishlist). Tapping it runs `requireAuth` then toggles a PLACEHOLDER on-device store (`src/app_state/favourites_store.ts`, cleared by `resetUser`). Replace its `toggle` with a database call when the wishlist (`favorites` table + RLS) is built. Rules recorded in `screen-patterns.md` section 7 and `DESIGN.md` section 7 (also: Airbnb is a quality bar, not a template; black stays out of filled buttons). Test the emulator does not buzz: haptics only work on a real phone.
+
+---
+
+### 2026-11-07 (later): Unified pull-to-refresh
+**Claude (chat). Written, NOT RUN.** New `src/components/AppRefreshControl.tsx` is the ONE pull-to-refresh: pass it as `refreshControl` on any `FlatList`/`ScrollView` that loads data. Native control (green spinner, white circle, light haptic on start, `progressViewOffset` = top inset for Android edge-to-edge, iOS title "African Spaces"). Home feed uses it. The custom wordmark-in-the-gap idea (from Devin) was deferred, not rejected as impossible: reasons in `DESIGN.md` section 7 (a hand-built Android version is possible with Reanimated + Gesture Handler). UNVERIFIED: Android spinner position under the status bar, iOS title rendering. Needs `expo-haptics` installed (see the haptics entry).
+
+---
+
+### 2026-11-07 (later): Loading skeletons on the home feed
+**Claude (chat). Written, NOT RUN.** New `src/components/Skeleton.tsx` (pulsing grey blocks that hold the real layout, still when Reduce motion is on; `useReducedMotion` from reanimated, unverified). `(tabs)/index.tsx` shows `FeedSkeleton` and two `FeaturedCardSkeleton`s on the first load instead of a spinner. `DESIGN.md` inventory updated.
+
+**Working agreement (owner, 2026-11-07):** by default the owner builds the pages and user flows and brings them to Claude, who improves them to the standards in `DESIGN.md` / the skills. When the owner explicitly asks Claude to build a page or flow (as with `host-setup`, the verification screens and the sign-in sheet), Claude builds it end to end to those standards, including loading, empty and error states. Claude does not plan or build user journeys unprompted. Swahili is postponed.
+
+**Haptics added (owner asked for the code before the install):** `src/lib/haptics.ts` imports `expo-haptics`; wired into `AmenityChip`, `ChoiceCard`, `CounterRow`, `SuggestionChip`, `listingTypeChoice` options (select), `NextPageButton` (tap), the tab bar (`tabPress`), the card heart, publish success, and wrong-code errors in `sign-in.tsx` and `contactConfirmation.tsx`. **The bundle will NOT build until the owner runs `npx expo install expo-haptics`, and the buzz needs a new native dev build.** Switch all of it off with `HAPTICS_ENABLED` in `haptics.ts`. (NOT RUN.)
+
+---
+
+### 2026-11-07: Text and sizing reconciliation (font scaling off, new responsive.ts, cards, home, picker)
+**Done in the Claude chat. Written, NOT RUN: nothing was tested on a device or the emulator.**
+
+**Why:** on a physical phone, text was cut off in many places: ratings showed "5." for "5.0", the featured card price showed "KES" with no number, "See all" showed "See", and the country picker showed only the flag (no "+254"). The 2026-11-04 fix (`Text.defaultProps.maxFontSizeMultiplier = 1.2`) cannot work in React 19 (defaultProps is ignored on function components; believed, not tested on device), so the cap was probably never applied.
+
+**Decision (Claude, interim, 2026-11-07; NOT an owner decision):** phone font scaling is ignored for now because nobody has tested whether the clipping came from scaling or from the system-font fallback. Plan: after the phone test, set `FONT_SCALING_ENABLED = true` with `MAX_FONT_SCALE` about 1.3 (apps like Airbnb and Coinbase support system text size). Recorded in `DESIGN.md` section 7.
+
+**Changed**
+- `src/styles/typography.ts`: `FONT_SCALING_ENABLED = false`, `MAX_FONT_SCALE`, `TEXT_SCALE_PROPS`. ONE switch for the whole app.
+- `src/components/AppText.tsx`: applies `TEXT_SCALE_PROPS`; `title`/`heading`/`display` use ink (`COLORS.ink`) unless the caller passes a colour class (`text-*` colour) or its own `style` colour.
+- `TextField`, `PhoneField`, `SelectField`, `OtpCodeInput`, `search`, `CountryCodePicker`: every raw `TextInput` spreads `{...TEXT_SCALE_PROPS}`.
+- `src/app/_layout.tsx`: removed the `Text.defaultProps` / `TextInput.defaultProps` block.
+- `src/styles/responsive.ts`: scale factor from the SHORT side / 390, clamped 0.9 to 1.15. `rv` is now an alias of `rs` (no more height-based scaling). `rm` uses its factor argument. Expect things to look about 8 to 10% smaller than before on 412 dp phones.
+- `src/components/listing_cards.tsx`: rebuilt to `screen-patterns.md` section 7: AppText only, "KSh 4,500 night", rating to one decimal (hidden when none), `expo-image` + placeholder, no shadow, heart is a separate 44 dp button drawn only when `onToggleFavourite` is passed (favourites do not exist yet).
+- `src/app/(tabs)/index.tsx`: loading, empty, error + "Try again", pull to refresh, load more; no `rv` fonts; `[...items].sort`; `columnWrapperStyle`; the header is an element (not a function) so the search field keeps focus.
+- `src/components/search.tsx`: AppText-sized font, 48 dp field, accessibility label; dead filter icon removed until filters exist.
+- `src/components/CountryCodePicker.tsx`: AppText everywhere; the trigger has `flexShrink: 0` and one line so the dial code can't be squeezed out.
+- `src/app/(tabs)/_layout.tsx`: tab labels use AppText (they used the system font with `fontWeight: "700"`).
+- `src/components/TextButton.tsx` now renders AppText; `profile.tsx` guest view and Sign out use AppText and palette buttons (no more `bg-black`).
+- Fixed heights became `minHeight`: `AmenityChip`, `NextPageButton`, `BackButton`, `VerificationButtons`, sign-in `PrimaryButton`. `SaveAndExit` and `Discard` now 40 dp + `hitSlop`.
+- `app.config.js`: `userInterfaceStyle: "light"`. **Needs a new native dev build** (EAS), a JS reload is not enough.
+- Docs: `DESIGN.md` (sections 2, 5.10, 7, 8, 9 updated; new "Text rendering" rules), `AGENTS.md`, `african-spaces-design/SKILL.md`, `platform-rules.md`, `screen-patterns.md`, `tells.md` (T21).
+
+**Rules from now on:** no raw `<Text>`; a raw `<TextInput>` spreads `{...TEXT_SCALE_PROPS}`; no `rv`/`rs` for font sizes; text boxes use `minHeight`; prices, ratings and dial codes get `flexShrink: 0`.
+
+**UNVERIFIED (check on the phone after rebuilding)**
+- That the clipping is gone. If "5.0" or "+254" are still cut, the cause is not font scale: test with Bold text off and Display size at default, and tell the next AI.
+- `expo-image` with `contentFit="fill"` on the gradient and the card layout in the 2-column list.
+- `hitSlop` object form on `SaveAndExit`, tab label width (72) with the 11 px bold caption.
+- That Android "Display size" at maximum still fits the cards (font scaling being off does not protect against this).
+
+**Follow-ups:** delete dead files with raw `<Text>` (`sign-up.tsx`, `PhoneInput.tsx`, `customInput.tsx`, `customButton.tsx`, `AppleSignInButton.tsx`, `prep.tsx`); heart + favourites table; filters; make the search field open a search page; rebuild `FeaturedCard`/`ListingCard` navigation to a listing detail page.
+
+---
 
 ### 2026-11-07: Design skills references updated (platform-rules, screen-patterns)
 **Docs only. No app code, no database change. NOT RUN: code snippets unverified.**
@@ -244,7 +298,8 @@ old_stuff/                    dead FastAPI-era auth. Ignore.
 ## 5. Conventions (follow these when writing code)
 
 **Sizing and text**
-- Never hard-code sizes. Use `rs()` (horizontal), `rv()` (vertical), `rm()` (moderate) from `@/styles/responsive`.
+- Never hard-code sizes. Use `rs()` (horizontal) and `rm()` (icons, controls, text-adjacent) from `@/styles/responsive`. `rv()` is a deprecated alias of `rs()`: it no longer scales by height, and must never be used for font sizes.
+- Phone font scaling is OFF for now (interim; `FONT_SCALING_ENABLED` in `styles/typography.ts`, plan to turn on at about 1.3 after testing). Never a raw `<Text>`; a raw `<TextInput>` spreads `{...TEXT_SCALE_PROPS}`; text boxes use `minHeight`, not `height`.
 - Text goes through `<AppText variant="small|body|large|title|heading|display|caption" weight="…">`. Variants live in `styles/typography.ts`. `font-rubik-*` Tailwind classes are **not** defined in `tailwind.config.js` (unverified in practice) — use `AppText`, which sets `fontFamily` in `style`.
 - Colours for `color=` props and StyleSheets: `COLORS` in `@/styles/colors`. Brand green is `#064D30` (`dark-green-ascents` / `brand` in Tailwind). Soft green `#EEF5F0`.
 - Prefer `style` for sizing and `className` for colours/borders/layout helpers.
@@ -368,7 +423,7 @@ App reads host_identity.status (own row only) and shows the state
 - `src/components/prep.tsx` is a scratch file with top-level JSX and missing imports; it is not imported but breaks type-checking. Delete it.
 - `lib/aut-actions.ts` is misspelled (kept so imports still work). `signup()` there takes no `id_number` any more; `sign-up.tsx` still passes one.
 - `AppleSignInButton.tsx` and the old `customButton.tsx` / `customInput.tsx` are mostly unused; `customButton` has implicit-any props.
-- **Listing types mismatch:** the wizard saves `room | hotel | house | apartment | guest_house`, the seed data and `listing_store` comments use `bedsitter | studio | one_bedroom …`. `ListingCard` prints the raw `type` and shows `$` instead of KES. Use `describeListing` / `DB_TYPE_LABELS` (`constants/listingTypes.ts`) and fix the price label.
+- **Listing types mismatch:** the wizard saves `room | hotel | house | apartment | guest_house`, the seed data uses `bedsitter | studio | one_bedroom …`. The cards now show `DB_TYPE_LABELS[type] ?? type` only when there is no area/region, so old seed types show as stored in that fallback. Re-seed or migrate the old values.
 - `tailwind.config.js` is out of sync with `styles/colors.ts`: it lacks `warning`, `danger`, `brand-line`, and `brand-soft` there is `#0A7A4D` while `COLORS.greenSoft` is `#EEF5F0` (code uses `bg-brand-soft` and `bg-warning-soft`). (unverified)
 - `lib/draftFiles.ts` has `keepPhoto()` but `addPhotos.tsx` and `ventureCoverPhoto.tsx` do not appear to call it, so drafted photos may be lost if Android clears the cache. (unverified)
 - Home screen: card `onPress` is empty, the search bar is not a button yet, filter chips not built, tab bar is `position: absolute` so screens need bottom padding (home uses 160).

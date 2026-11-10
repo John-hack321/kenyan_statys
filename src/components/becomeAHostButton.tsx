@@ -1,25 +1,22 @@
-import { Text, TouchableOpacity } from "react-native";
+import { TouchableOpacity } from "react-native";
+import AppText from "@/components/AppText";
 
-// make this work like a universal button .
-// it will just use for simple stuff that do not need alot of customizations btw .
-
+// A simple text button for places that do not need many options (it was becomeAHostButton.tsx).
+// The caller decides the look with className / textClassName (colours), and what it does with onPress.
+// The text itself is always AppText (Rubik, no clipping), so size and weight come from the variant.
 type Props = {
-    textClassName: string;
+    textClassName?: string;
     buttonName: string;
     className?: string;
-    onPress?: () => void; // we have to make this programmable because it will have different effects based on the location of placement .
+    onPress?: () => void;
 };
 
-const CustomButton = ({textClassName, buttonName , className = "", onPress }: Props) => {
-    return (
-        <TouchableOpacity
-            onPress={onPress}
-            activeOpacity={0.7}
-            className={`${className}`}
-        >
-            <Text className={`${textClassName}`}>{buttonName}</Text>
-        </TouchableOpacity>
-    );
-};
+const TextButton = ({ textClassName = "", buttonName, className = "", onPress }: Props) => (
+    <TouchableOpacity onPress={onPress} activeOpacity={0.7} accessibilityRole="button" className={className}>
+        <AppText variant="large" weight="bold" className={textClassName} numberOfLines={1}>{buttonName}</AppText>
+    </TouchableOpacity>
+);
 
-export default CustomButton;
+export default TextButton;
+
+// may need to change the name to text button I guess 

@@ -9,7 +9,7 @@ export default {
   orientation: "portrait",
   icon: "./assets/images/icon.png",
   scheme: "budgetlens",
-  userInterfaceStyle: "automatic",
+  userInterfaceStyle: "light",
   ios: {
     icon: "./assets/expo.icon",
     config: {

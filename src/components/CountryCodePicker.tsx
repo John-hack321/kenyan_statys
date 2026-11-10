@@ -1,27 +1,25 @@
 import { useMemo, useState } from 'react';
-import {
-  FlatList,
-  Modal,
-  Pressable,
-  StyleSheet,
-  TextInput,
-  Text,
-  View,
-} from 'react-native';
+import { FlatList, Modal, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
+import AppText from '@/components/AppText';
 import {
   COUNTRIES,
   DEFAULT_COUNTRY,
   filterCountries,
   type Country,
 } from '@/constants/countryCodes';
+import { COLORS } from '@/styles/colors';
+import { rm, rs } from '@/styles/responsive';
+import { FONT_BY_WEIGHT, TEXT_SCALE_PROPS } from '@/styles/typography';
 
 type Props = {
   value?: Country;
   onChange: (country: Country) => void;
 };
 
+// The small "flag +254 v" button inside PhoneField, and the full-screen country list it opens.
+// The trigger never shrinks (flexShrink 0) and its text is one line, so the code can't be squeezed out
+// by the number box next to it (that is what hid "+254" before).
 export function CountryCodePicker({ value = DEFAULT_COUNTRY, onChange }: Props) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -42,33 +40,36 @@ export function CountryCodePicker({ value = DEFAULT_COUNTRY, onChange }: Props) 
     <>
       <Pressable
         onPress={() => setOpen(true)}
+        hitSlop={8}
+        accessibilityRole="button"
+        accessibilityLabel={`Country code ${value.dialCode}, ${value.name}. Tap to change`}
         style={styles.trigger}>
-        <Text style={styles.triggerText}>
+        <AppText variant="body" numberOfLines={1} style={styles.triggerText}>
           {value.flag} {value.dialCode}
-        </Text>
-        <Text style={styles.chevron}>▾</Text>
+        </AppText>
+        <AppText variant="caption" style={styles.chevron}>▾</AppText>
       </Pressable>
 
       <Modal visible={open} animationType="slide" onRequestClose={close}>
         <View style={styles.modalContainer}>
           <SafeAreaView style={styles.flex}>
             <View style={styles.header}>
-              <Text style={styles.title}>
-                Select country
-              </Text>
-              <Pressable onPress={close} hitSlop={12}>
-                <Text style={styles.closeText}>Close</Text>
+              <AppText variant="title" weight="bold">Select country</AppText>
+              <Pressable onPress={close} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close">
+                <AppText variant="body" weight="medium" style={{ color: COLORS.green }}>Close</AppText>
               </Pressable>
             </View>
 
             <TextInput
+              {...TEXT_SCALE_PROPS}
               value={query}
               onChangeText={setQuery}
               placeholder="Search country or code"
-              placeholderTextColor="#888"
+              placeholderTextColor={COLORS.faint}
               autoCorrect={false}
               autoCapitalize="none"
               clearButtonMode="while-editing"
+              accessibilityLabel="Search country or code"
               style={styles.search}
             />
 
@@ -79,20 +80,23 @@ export function CountryCodePicker({ value = DEFAULT_COUNTRY, onChange }: Props) 
               keyboardShouldPersistTaps="handled"
               initialNumToRender={20}
               ListEmptyComponent={
-                <Text style={styles.empty}>
+                <AppText variant="small" className="text-gray-500" style={styles.empty}>
                   No countries match "{query}"
-                </Text>
+                </AppText>
               }
               renderItem={({ item }) => (
                 <Pressable
                   onPress={() => select(item)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${item.name} ${item.dialCode}`}
+                  accessibilityState={{ selected: item.code === value.code }}
                   style={({ pressed }) => [
                     styles.row,
                     (pressed || item.code === value.code) && styles.rowSelected,
                   ]}>
-                  <Text style={styles.flag}>{item.flag}</Text>
-                  <Text style={styles.name}>{item.name}</Text>
-                  <Text style={styles.dialCode}>{item.dialCode}</Text>
+                  <AppText variant="large">{item.flag}</AppText>
+                  <AppText variant="body" numberOfLines={1} style={styles.name}>{item.name}</AppText>
+                  <AppText variant="small" className="text-gray-500" style={styles.dialCode}>{item.dialCode}</AppText>
                 </Pressable>
               )}
             />
@@ -105,61 +109,48 @@ export function CountryCodePicker({ value = DEFAULT_COUNTRY, onChange }: Props) 
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  modalContainer: {
-    flex: 1,
-    backgroundColor: 'white',
-  },
+  modalContainer: { flex: 1, backgroundColor: COLORS.white },
   trigger: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingVertical: 4,
+    flexShrink: 0,          // never squeezed by the number box next to it
+    gap: rs(6),
+    minHeight: rm(44),
   },
-  triggerText: {
-    fontSize: 16,
-    color: '#000',
-  },
-  chevron: {
-    fontSize: 12,
-    color: '#666',
-  },
+  triggerText: { flexShrink: 0, color: COLORS.ink },
+  chevron: { color: COLORS.muted },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 8,
+    paddingHorizontal: rs(16),
+    paddingTop: rm(16),
+    paddingBottom: rm(8),
   },
-  title: { fontSize: 24, lineHeight: 32, fontWeight: 'bold' },
-  closeText: { color: '#007AFF', fontSize: 16 },
   search: {
-    marginHorizontal: 16,
-    marginBottom: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 8,
-    fontSize: 16,
-    backgroundColor: '#f5f5f5',
-    color: '#000',
+    marginHorizontal: rs(16),
+    marginBottom: rm(12),
+    paddingHorizontal: rs(16),
+    paddingVertical: rm(12),
+    borderRadius: rm(8),
+    fontFamily: FONT_BY_WEIGHT.regular,
+    fontSize: rm(15),
+    backgroundColor: '#F3F4F6',
+    color: COLORS.ink,
   },
-  list: {
-    flex: 1,
-  },
+  list: { flex: 1 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    gap: rs(12),
+    minHeight: rm(52),
+    paddingHorizontal: rs(16),
+    paddingVertical: rm(10),
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#e5e5e5',
+    borderBottomColor: '#E5E7EB',
   },
-  rowSelected: {
-    backgroundColor: '#f0f0f0',
-  },
-  flag: { fontSize: 20 },
-  name: { flex: 1, fontSize: 16, color: '#000' },
-  dialCode: { fontSize: 14, color: '#888' },
-  empty: { textAlign: 'center', padding: 16, color: '#888' },
+  rowSelected: { backgroundColor: '#F3F4F6' },
+  name: { flex: 1, color: COLORS.ink },
+  dialCode: { flexShrink: 0 },
+  empty: { textAlign: 'center', padding: rs(16) },
 });

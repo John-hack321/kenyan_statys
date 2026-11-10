@@ -20,3 +20,16 @@ export const FONT_BY_WEIGHT: Record<TextWeight, string> = {
     semibold: "Rubik-SemiBold",
     bold: "Rubik-Bold",
 };
+// ---------- font scaling: ONE switch for the whole app ----------
+// Owner decision (2026-11-07): the app's look must never break, so the phone's "Font size" setting is IGNORED.
+// Sizes come only from TEXT_VARIANTS. To bring accessibility scaling back later, set this to true:
+// text then grows up to MAX_FONT_SCALE and every layout must still survive it (see DESIGN.md section 5.10).
+// Text.defaultProps cannot do this job in React 19, so every Text / TextInput gets these props explicitly:
+// AppText does it itself, a raw <TextInput> spreads {...TEXT_SCALE_PROPS}.
+export const FONT_SCALING_ENABLED = false;
+export const MAX_FONT_SCALE = 1.2;
+
+export const TEXT_SCALE_PROPS = {
+    allowFontScaling: FONT_SCALING_ENABLED,
+    maxFontSizeMultiplier: MAX_FONT_SCALE,
+} as const;

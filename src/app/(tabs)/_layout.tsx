@@ -1,11 +1,13 @@
 import { useEffect } from "react";
-import { Text, View } from "react-native";
+import { View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Href, Tabs, usePathname, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAppMode } from "@/lib/hooks/useAppMode";
+import AppText from "@/components/AppText";
 import { COLORS } from "@/styles/colors";
+import { haptics } from "@/lib/haptics";
 
 const TAB_HEIGHT = 68;
 const HOST_HOME = "/host-dashboard";
@@ -20,12 +22,14 @@ type TabBarIconProps = {
 const TabBarIcon = ({ focused, iconName, title }: TabBarIconProps) => (
     <View style={{ width: 72, alignItems: "center", justifyContent: "center" }}>
         <Ionicons name={iconName} size={24} color={focused ? COLORS.green : "#5D5F6D"} />
-        <Text
+        <AppText
+            variant="caption"
+            weight="bold"
             numberOfLines={1}
-            style={{ marginTop: 2, fontSize: 12, fontWeight: "700", color: focused ? COLORS.green : "#5D5F6D" }}
+            style={{ marginTop: 2, color: focused ? COLORS.green : "#5D5F6D" }}
         >
             {title}
-        </Text>
+        </AppText>
     </View>
 );
 
@@ -59,6 +63,7 @@ export default function TabsLayout() {
         <View style={{ flex: 1, backgroundColor: "white" }}>
             <StatusBar style="dark" />
             <Tabs
+                screenListeners={{ tabPress: () => haptics.select() }}
                 screenOptions={{
                     headerShown: false,
                     tabBarShowLabel: false,

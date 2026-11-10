@@ -26,7 +26,7 @@ Builds and is learning. New to Supabase and raw SQL (used to ORMs like SQLAlchem
 - **Security lives in the database** (RLS, column grants, RPCs). UI hiding, tab hiding and route guards are UX only.
 - **Writes with rules go through an RPC**; reads with filters through a view with `security_invoker = true`.
 - **Keep sensitive data in private tables** (phone, ID, exact address). Public tables (`ventures`, `listings`, `media`, `reviews`) never hold it.
-- **UI conventions:** sizes with `rs()/rv()/rm()`, text with `AppText`, colours from `COLORS`, fields with `TextField` / `PhoneField` / `SelectField` (floating label), covering modals with `ModalSheet` (black top, white status-bar icons), auth-gated actions with `useRequireAuth()`.
+- **UI conventions:** sizes with `rs()/rm()` (`rv()` is a deprecated alias of `rs()`, never for fonts), text with `AppText` only (never a raw `<Text>`; a raw `<TextInput>` spreads `{...TEXT_SCALE_PROPS}`), `minHeight` not `height` on text boxes, colours from `COLORS`, fields with `TextField` / `PhoneField` / `SelectField` (floating label), covering modals with `ModalSheet` (black top, white status-bar icons), auth-gated actions with `useRequireAuth()`.
 - **Design work follows `DESIGN.md`.** Search its component inventory before creating anything. Meet its hard floors (touch targets, contrast, never colour alone, accessibility roles/labels/states, loading/empty/error/success states, reduced motion, keyboard-safe forms, safe areas, survives font scale 1.2). Show the owner the one primary action and the pattern you chose before writing a screen.
 - **Check the Expo SDK 57 docs** before using an Expo / Expo Router API.
 - New code goes in `src/lib/` (there is also an older root `lib/`; `@/lib/x` resolves to the root one first).

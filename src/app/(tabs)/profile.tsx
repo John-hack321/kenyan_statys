@@ -1,4 +1,4 @@
-import { ScrollView, Switch, Text, TouchableOpacity, View } from "react-native";
+import { ScrollView, Switch, TouchableOpacity, View } from "react-native";
 import { Image } from 'expo-image';
 import { Href, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -44,26 +44,28 @@ const Profile = () => {
                 </View>
 
                 {/* Text */}
-                <Text className="text-2xl font-bold text-center mb-2">
+                <AppText variant="heading" className="text-center" style={{ marginBottom: rv(8) }}>
                     You're browsing as a guest
-                </Text>
-                <Text className="text-base text-gray-500 text-center mb-8 max-w-[300px]">
+                </AppText>
+                <AppText variant="body" className="text-gray-500 text-center" style={{ marginBottom: rv(32), maxWidth: 300 }}>
                     Sign in to see your profile, save listings and message owners.
-                </Text>
+                </AppText>
 
                 {/* Primary action */}
                 <TouchableOpacity
                     onPress={() => router.push('/sign-in')}
-                    activeOpacity={0.8}
-                    className="bg-black rounded-xl py-4 w-full max-w-[360px] items-center"
+                    activeOpacity={0.85}
+                    accessibilityRole="button"
+                    className="bg-dark-green-ascents rounded-xl w-full max-w-[360px] items-center justify-center"
+                    style={{ minHeight: rm(52) }}
                 >
-                    <Text className="text-white font-bold text-base">Sign in</Text>
+                    <AppText variant="large" weight="bold" className="text-white">Sign in</AppText>
                 </TouchableOpacity>
 
                 {/* Divider */}
                 <View className="flex-row items-center w-full max-w-[360px] my-6">
                     <View className="flex-1 h-px bg-gray-200" />
-                    <Text className="mx-3 text-xs text-gray-400">Have a place to list?</Text>
+                    <AppText variant="caption" className="mx-3 text-gray-400">Have a place to list?</AppText>
                     <View className="flex-1 h-px bg-gray-200" />
                 </View>
 
@@ -133,8 +135,14 @@ const Profile = () => {
                 </View>
             )}
 
-            <TouchableOpacity onPress={signOut} className="bg-black rounded-lg p-3 items-center" style={{ marginTop: rv(8) }}>
-                <Text className="text-white font-bold">Sign out</Text>
+            <TouchableOpacity
+                onPress={signOut}
+                activeOpacity={0.8}
+                accessibilityRole="button"
+                className="items-center justify-center rounded-xl border border-gray-300"
+                style={{ marginTop: rv(8), minHeight: rm(48) }}
+            >
+                <AppText variant="large" weight="semibold">Sign out</AppText>
             </TouchableOpacity>
         </ScrollView>
     )

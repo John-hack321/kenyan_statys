@@ -19,7 +19,7 @@ export type Requirement = {
 // `identityVerified` will come from the host_identity table once the ID check exists.
 export function getHostRequirements(
     user: User | null,
-    draft: BecomeAHostVentureDraft,
+    draft: BecomeAHostVentureDraft, // here we will only pass the email from users account so that we get to compare it with the one the user put in during the ventur flow wizard . 
     identityVerified = false
 ): Requirement[] {
     const accountEmail = user?.email ?? "";

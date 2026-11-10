@@ -15,7 +15,7 @@
 |---|---|
 | What is it | Short-stay home marketplace for Kenya, expanding across Africa. Guests browse and book; hosts list through a venture profile. |
 | Who uses it | Kenyan guests and hosts, mostly on mid-range and low-end Android phones, often on mobile data. Some on iPhone later. Many hosts are first-time listers, so the host flow must teach as it goes. |
-| Vibe | **Calm, trustworthy, Airbnb-like.** Lots of white, one clear primary action per screen, outlined fields, quiet green accent. Warm, plain language. Never flashy. |
+| Vibe | **Calm, trustworthy, Airbnb-quality (a quality bar, not a template: learn from its hierarchy and restraint, do not copy its screens).** Lots of white, one clear primary action per screen, outlined fields, quiet green accent. Warm, plain language. Never flashy. |
 | Platform posture | **One design for both platforms**, adapted only where the platform expects it (back behaviour, permission prompts, pickers, keyboard). Android first. |
 | Theme | **Light only** for now (see 9, deviation 11). |
 
@@ -65,15 +65,23 @@ Change a dial only with the owner's say-so, and log it.
 
 All sizes go through `rm()`. Always `AppText`, never a raw `<Text>` in new code.
 
+### Text rendering (the rules that stop text from breaking)
+
+1. **Always `AppText`.** Never a raw `<Text>` in UI. A raw `<Text className="font-rubik-bold">` falls back to the phone's system font (those classes do not exist in `tailwind.config.js`), whose width differs from what the layout measured. That is what clipped "5.0", "KSh 4,500", "+254" and "See all" on the first phone test.
+2. **Font scaling is OFF app-wide for now** (interim, section 7; planned to be turned on at about 1.3 after testing). One switch: `FONT_SCALING_ENABLED` in `src/styles/typography.ts`. `AppText` applies it; a raw `<TextInput>` must spread `{...TEXT_SCALE_PROPS}` (all current inputs do). Do not use `Text.defaultProps` (does nothing in React 19).
+3. **Text never decides a box's size from outside.** Rows: `flex: 1` on the text and `numberOfLines`; things that must stay whole (price, rating, dial code, "See all") get `flexShrink: 0` or `minWidth`. Boxes that hold text use `minHeight` + padding, never a fixed `height`.
+4. **Sizes come from `TEXT_VARIANTS`.** Never `rv()` or `rs()` for a font size, never `fontSize` by hand.
+5. **Test the layout with Android "Display size" at its largest** and a 360 dp phone (that still changes dp even with font scaling off), and with Bold text on.
+
 ### Space, shape, size
 
-- Sizing helpers: `rs()` horizontal, `rv()` vertical, `rm()` general/icon/size. Never raw numbers for layout in new code.
+- Sizing helpers (`src/styles/responsive.ts`): design in dp on a ~390 wide phone. `rs()` and `rm()` multiply by a factor taken from the phone's SHORT side and clamped to 0.9 to 1.15 (so no phone gets cramped or huge); `rm()` moves only half as far. **`rv()` is a deprecated alias of `rs()`** (scaling by window height made spacing differ between gesture-nav Android, 3-button Android and iOS). Use `rs` horizontally, `rm` for icon, control and text-adjacent sizes; old `rv(...)` calls keep working, do not add new ones. Never raw numbers for layout in new code. Prefer `flex`, `%` and `minHeight` over fixed pixel sizes.
 - **Page gutter:** `paddingHorizontal: rs(20)` (`rs(24)` on the welcome page).
 - **Page header block:** `paddingTop: rv(20)`, `paddingBottom: rv(8)`; title `AppText variant="title"`; subtitle `variant="small" className="text-gray-500"` with `marginTop: rv(4)`.
 - **Vertical rhythm:** `gap: rv(14)` inside forms, `rv(16)` between page sections, `rv(10)` to `rv(12)` between list rows.
 - **Radii:** cards and panels `rounded-2xl` (16); buttons and inputs `rm(12)` / `rounded-xl`; chips, avatars, icon bubbles `rounded-full`.
 - **Borders:** inputs `1.5px` (never changes width on focus, only colour); cards `border border-gray-200`.
-- **Control heights:** primary button `rm(48)` to `rm(52)`; chip `rm(42)`; field row about `rv(14)` padding + text.
+- **Control heights:** primary button `rm(48)` to `rm(52)`; chip `minHeight: rm(44)`; field row about `rv(14)` padding + text.
 - **Icons:** Ionicons, outline style (`*-outline`), `rm(14)` to `rm(24)`; filled only for selected or status (`checkmark-circle`, `star`, `heart`).
 - **Shadows:** almost none. Separation comes from borders and white space. Floating tab bar and sheets are the exceptions.
 
@@ -95,6 +103,9 @@ All sizes go through `rm()`. Always `AppText`, never a raw `<Text>` in new code.
 | One-time code | `OtpCodeInput` | `OtpCodeInput.tsx` |
 | Outlined "Continue with…" row | `AuthOptionRow` | `AuthOptionRow.tsx` |
 | Covering modal (sign-in etc.) | `ModalSheet` | `ModalSheet.tsx` |
+| Pull to refresh on any scrolling screen | `AppRefreshControl` as the list's `refreshControl` prop | `AppRefreshControl.tsx` (native control, branded) |
+| Physical feedback (buzz on toggles, picks, steps, finished actions, failures) | `haptics.tap/select/success/error` | `src/lib/haptics.ts` (needs `npx expo install expo-haptics`) |
+| Loading placeholder (never a bare spinner for a list) | `Skeleton`, `ListingCardSkeleton`, `FeaturedCardSkeleton`, `FeedSkeleton` | `Skeleton.tsx` (respects Reduce motion) |
 | Verification page shell | `VerificationScreen` + `StatusPanel` + `PrimaryButton`/`SecondaryButton` | `components/verification/` |
 | Wizard footer buttons | `NextPageButton`, `BackButton`, `SaveAndExitButton`, `DiscardButton`, `FlowProgressBar` | `ventureFlowButtons.tsx` |
 | Full-screen progress | `PublishingOverlay` | `PublishingOverlay.tsx` |
@@ -140,7 +151,7 @@ Canonical code for each is in `.claude/skills/_shared/references/screen-patterns
 7. **Keyboard-safe forms:** the focused field is never hidden; Next/Done keys wired; numeric fields use the right `keyboardType`.
 8. **Safe areas** respected top and bottom (the floating tab bar means scroll screens need bottom padding, currently 160).
 9. **No sensitive data in logs, drafts on disk, or error text** (ID number, phone are memory-only; see `AGENTS.md`).
-10. **Text scales:** new layouts must survive font scale 1.2 (the app caps it, see 7) without clipping; prefer `flex: 1` + `numberOfLines` over fixed widths.
+10. **Text never breaks:** follow "Text rendering" in section 2. Font scaling is off, so the stress tests are Android Display size at maximum, a 360 dp phone and Bold text; prefer `flex: 1` + `numberOfLines` over fixed widths, `minHeight` over `height`.
 
 ---
 
@@ -182,21 +193,29 @@ Same visual design on iOS and Android. Adapt only these:
 
 | Date | Decision | Why | Who |
 |---|---|---|---|
+| 2026-11-07 | **Phone font scaling is ignored for now (`FONT_SCALING_ENABLED = false`). INTERIM, Claude's call, not an owner decision.** One switch in `styles/typography.ts`; `AppText` and every `TextInput` read it. Plan: after the new build passes the phone test, flip it to `true` with `MAX_FONT_SCALE` about 1.3, because apps like Airbnb and Coinbase support system text size and users who need large text lose out otherwise. | The clipping may be caused by the system-font fallback (now fixed by AppText) rather than by scaling, and nobody has tested yet; off is the safe default until that is known. Accessibility cost: people with a large system font get no larger text while it is off. | Claude (chat) |
+| 2026-11-07 | **Feed card hierarchy: photo, then two text lines only** ("Apartment in Kasarani" / "KSh 2,100 per night · ★ 4.5"); price always says "per night"; the heart stays visible on the photo (future wishlist) and is saved on the phone only until the wishlist table exists. | Owner feedback comparing with Airbnb: ours was busier (3 text lines, bold price, separate rating). The earlier 3-line shape came from the design notes and is replaced. | Owner feedback, Claude (chat) |
+| 2026-11-07 | **Black stays out of the buttons.** One filled-button colour (brand green) for primary actions; near-black (`ink`) is for text, icons and outlined secondary buttons; a black fill only for the Sign in with Apple button (Apple's rules). The guest profile "Sign in" is green. | One primary colour keeps a clear single action per screen. Easy to flip if the owner wants a black neutral button back. | Claude (chat), owner said either is fine |
+| 2026-11-07 | **One pull-to-refresh: `AppRefreshControl` (native `RefreshControl`, branded).** A custom "African Spaces" wordmark in a pulled-down gap was NOT built (deferred, not impossible). | iOS opens that gap for free (scroll bounce); on Android it must be built by hand: a Reanimated + Gesture Handler pull gesture that moves the content down while the list is at the top and shares touches with the list's own scroll. Doable, but fiddly to get smooth on low-end phones, which is the audience. How X or Airbnb do it on Android was NOT checked; an earlier version of this note claimed they use the native control, which was unverified. Revisit if the owner wants it; test on a real low-end phone first. On iOS the app name already shows as the control's title. | Claude (chat), asked by owner to decide |
+| 2026-11-07 | **Sizing rewritten:** clamped short-side scale (0.9 to 1.15, base 390); `rv` aliased to `rs`; `rm` really uses its factor. | Height-based scaling made spacing differ across Android nav modes and iOS; the old 350x680 base inflated everything about 18% on a 412 dp phone. Sizes now look about 8 to 10% smaller there. | Claude (chat) |
+| 2026-11-07 | **Light-only UI:** `userInterfaceStyle: "light"` in `app.config.js` (needs a new dev build). | Every screen is light; "automatic" could turn system dialogs and keyboards dark. | Claude (chat) |
+| 2026-11-07 | Feed cards rebuilt to the section 7 target: KSh, `expo-image` + placeholder, no shadow, heart drawn only when a screen passes `onToggleFavourite`; home screen shows loading, empty, error + retry, refresh, load-more; search field loses its dead filter icon until filters exist. | Closes deviations 1, 6, 7, 9, 10, 11 below. | Claude (chat) |
 | 2026-11-07 | **Motion dial raised from 3 to 5.** Collapsing/scroll-linked headers (WhatsApp-style profile photo) and similar purposeful motion are welcome. | Owner said they like this kind of animation. | Owner, recorded by Claude (chat) |
 | 2026-11-07 | **Keep `TouchableOpacity`** for new buttons for now; do not mix in `Pressable` in the same screen. May migrate later as one deliberate change. | `AGENTS.md`: no second pattern without a recorded reason. Consistency beats the small ripple benefit. | Claude (chat), proposed |
 | 2026-11-07 | Display currency as **KSh**. | Kenyan convention, matches the price page. | Claude (chat), proposed |
 | 2026-11-07 | This file, `.claude/skills/african-spaces-design`, `…-review` and `_shared/references/` created. | Make design quality repeatable across AIs. | Claude (chat) |
-| 2026-11-04 | Font scaling capped at 1.2 (`maxFontSizeMultiplier`). | Text clipped on a phone with large system text. | Local coding AI |
+| 2026-11-04 | ~~Font scaling capped at 1.2 via `Text.defaultProps`.~~ **Superseded 2026-11-07.** `defaultProps` does nothing on function components in React 19 (believed from the React 19 release notes; not tested on device), so the cap was likely never applied. | Text clipped on a phone with large system text. | Local coding AI |
 | earlier | Airbnb is the visual reference; fields are outlined with floating labels; one primary action; modals use `ModalSheet`. | Product principles in `buildLog.md` section 2. | Owner |
 
-Open question for the owner: the 1.2 cap is below what accessibility guidance expects (users can set 200% on Android and iOS). A better long-term fix is layouts that flex, then raising the cap to 1.5 or removing it.
+Open question, closed 2026-11-07: scaling is off (see the first row). Revisit when the layouts have been tested at 1.2; accessibility guidance expects scaling up to 200%.
 
 ---
 
 ## 8. Dated, version-sensitive facts (verify against Expo SDK 57 docs before relying)
 
 - Expo SDK 57, React Native 0.86.3, React 19.2.3, Reanimated 4.5.1, NativeWind 4.2.6 / Tailwind 3.4.
-- `app.config.js`: `userInterfaceStyle: "automatic"`, `predictiveBackGestureEnabled: false`, edge-to-edge behaviour **(unverified)**.
+- `app.config.js`: `userInterfaceStyle: "light"` (changed 2026-11-07, needs a native rebuild), `predictiveBackGestureEnabled: false`, edge-to-edge behaviour **(unverified)**.
+- `Text.defaultProps` is ignored on function components in React 19, so font-scaling props are set per component **(believed; confirm in the React 19 upgrade notes)**.
 - Reanimated's reduced-motion handling for entering animations in 4.5 **(unverified; check docs)**.
 
 ---
@@ -207,18 +226,15 @@ Fix when you touch the file anyway, or as a dedicated pass. Do not mass-edit acr
 
 | # | Where | Deviation | Rule |
 |---|---|---|---|
-| 1 | `ventureFlowButtons.tsx` `SaveAndExitButton`, `DiscardButton` | Height/width `rm(36)`, no `hitSlop` | 5.1 touch target |
 | 2 | `welcomePage.tsx` caption, `listingFlowGratitude.tsx` "1/3" | `text-gray-400` on white for meaningful text | 5.2 contrast |
 | 3 | `Confetti.tsx`, `FadeInDown` pages | No reduced-motion check | 5.6 |
 | 4 | Many files | Inline hex (`"#111"`, `"#6B7280"`, `GREEN` consts) instead of `COLORS` | 2 tokens |
 | 5 | `tailwind.config.js` vs `colors.ts` | Missing `warning`, `danger`, `brand-line`; `brand-soft` is `#0A7A4D` in Tailwind but `#EEF5F0` in `COLORS` | 2 tokens (already in `buildLog.md` section 8) |
-| 6 | `listing_cards.tsx` | Raw `type` string, `$` currency, no image placeholder when `coverUrl` is null, heart is not a button, no accessibility roles/labels, rating shown unformatted in `ListingCard` | 6, 5.4, 5.5 |
-| 7 | `search.tsx` | Font via `rv()` (should be `rm()`), no accessibility label, not yet a button to a search page, filter icon is not touchable-sized | 2, 5.1, 5.4 |
-| 8 | `AppText` | Titles and headings use the same mid-grey (`#5D5F6D`) as body, which flattens hierarchy | 2 colour (proposal: ink for `title`/`heading`/`display`) |
-| 9 | `(tabs)/index.tsx` | Loading shows a bare spinner, error from the store is never shown, no pull-to-refresh/footer wired | 5.5 |
-| 10 | `profile.tsx` (guest view) | Raw `<Text>`/`font-bold`, `bg-black` buttons, off-palette vs the rest of the app | 2, 3 |
-| 11 | `app.config.js` | `userInterfaceStyle: "automatic"` but every screen is light-only; on a dark-mode phone system dialogs/keyboard may turn dark **(unverified)** | 1 Theme |
 | 12 | Wizard (`router.replace`) | No iOS swipe-back; Android back behaviour not verified | 6b |
+| 13 | `sign-up.tsx`, `PhoneInput.tsx`, `customInput.tsx`, `customButton.tsx`, `AppleSignInButton.tsx`, `prep.tsx` | Dead files with raw `<Text>`, `rv` font sizes; delete them | 2, text rendering |
+| 14 | Small visual targets: wizard `BackButton`, `StepButton` in `CounterRow` (36), `SaveAndExit`/`Discard` (40 + hitSlop) | Reach 44 only through `hitSlop` | 5.1 |
+
+Closed on 2026-11-07 (NOT run on a device): #1 (hitSlop), #6 (cards), #7 (search), #9 (home states), #8 (`AppText` titles/headings now use ink, unless the caller passes a colour class or style), #10 (profile guest view and sign-out), #11 (`userInterfaceStyle`).
 
 ---
 

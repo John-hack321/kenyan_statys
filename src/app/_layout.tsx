@@ -2,29 +2,11 @@ import "../../global.css";
 
 import { cssInterop } from "nativewind";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Text, TextInput } from "react-native";
 
 cssInterop(SafeAreaView, { className: "style" });
 
-// Cap font scaling to prevent layout issues on devices with accessibility settings
-// Allows text to grow up to 120% max (good balance between accessibility and UI stability)
-// @ts-ignore - defaultProps exists at runtime but not in newer React Native type definitions
-if (Text.defaultProps) {
-  // @ts-ignore
-  Text.defaultProps.maxFontSizeMultiplier = 1.2;
-} else {
-  // @ts-ignore
-  Text.defaultProps = { maxFontSizeMultiplier: 1.2 };
-}
-
-// @ts-ignore
-if (TextInput.defaultProps) {
-  // @ts-ignore
-  TextInput.defaultProps.maxFontSizeMultiplier = 1.2;
-} else {
-  // @ts-ignore
-  TextInput.defaultProps = { maxFontSizeMultiplier: 1.2 };
-}
+// Font scaling is handled per component (AppText / TEXT_SCALE_PROPS in styles/typography.ts).
+// The old Text.defaultProps block was removed: defaultProps does nothing on function components in React 19.
 
 import { Stack } from "expo-router";
 import AuthProvider from "../../providers/auth-provider";
