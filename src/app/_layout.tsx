@@ -74,6 +74,18 @@ function RootLayout() {
             }}
           />
           <Stack.Screen name="(venture_and_listings_flow)" options={{headerShown: false}} />
+          {/* Confirm phone / email with a code: a SHORT bottom sheet over host-setup (ModalSheet variant="compact").
+              Same transparentModal recipe as (auth) above, so the page behind stays visible but dimmed. */}
+          <Stack.Screen
+            name="contactConfirmation"
+            options={{
+              presentation: "transparentModal",
+              animation: "none",
+              gestureEnabled: false,
+              statusBarTranslucent: true,
+              contentStyle: { backgroundColor: "transparent" },
+            }}
+          />
         </Stack>
       </AuthProvider>
     </GestureHandlerRootView>
